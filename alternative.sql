@@ -47,6 +47,22 @@ where person_home_ownership = 'other';
 select cb_person_cred_hist_length from filtered_dataset
 order by cb_person_cred_hist_length desc;
 
+select loan_percent_income from filtered_dataset
+order by loan_percent_income desc 
+limit 5;
+
+select loan_percent_income from filtered_dataset 
+order by loan_percent_income 
+limit 5;
+
+/* 
+ * found loan_percent_income with value 0
+ */
+
+select person_age, person_home_ownership, loan_amnt, loan_percent_income from filtered_dataset  
+where loan_percent_income = 0
+order by person_age desc;
+
 /* 
  * high risk: person_emp_length = 0 to 6
  * medium risk: person_emp_length = 7 to 12
