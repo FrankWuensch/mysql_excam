@@ -2,7 +2,8 @@ create database if not exists weather;
 
 use weather;
 
-drop function get_correlation_category;
+drop function if exists get_correlation_category;
+drop function if exists get_uv_risk;
 
 delimiter //
 
@@ -19,6 +20,25 @@ begin
     else
         return 'no significant correlation';
     end if;
+end //
+
+create function get_uv_risk(value integer)
+returns varchar(30)
+deterministic
+begin
+	if value >= 11 then
+		return 'extreme risk';
+	elseif value between 8 and 10 then 
+		return 'very high risk';
+	elseif value between 6 and 7 then 
+		return 'high risk';
+	elseif value between 3 and 5 then 
+		return 'medium risk';
+	elseif value between 1 and 2 then 
+		return 'low risk';
+	else 
+		return 'no risk';
+	end if; 
 end //
 
 delimiter ;
@@ -218,3 +238,34 @@ select
 from wind_counts wc
 cross join total_count tc
 order by wc.count_per_type desc;
+
+-- get count and percentage of risk level for uv index in Berlin 2025
+with tb_risk_level as (
+	select round(gwr.uv_index) as uv_index_rounded, 
+	count(get_uv_risk(round(gwr.uv_index))) as ct_uv_risk_level,
+	get_uv_risk(round(gwr.uv_index)) as uv_risk_level
+	from GlobalWeatherRepository gwr 
+	where gwr.location_name = 'Berlin' 
+	and extract(year from gwr.last_updated) = 2025
+	group by uv_index_rounded, gwr.uv_index, uv_risk_level
+	order by 
+	case
+		when round(gwr.uv_index) >= 11 then 0
+		when round(gwr.uv_index) between 8 and 10 then 1
+		when round(gwr.uv_index) between 6 and 7 then 2
+		when round(gwr.uv_index) between 3 and 5 then 3
+		when round(gwr.uv_index) between 1 and 2 then 4
+		else 5
+	end
+), tb_uv_risk_level_count as (
+select rl.uv_index_rounded as uv_index_rounded,
+	sum(rl.ct_uv_risk_level) as ct_uv_risk_level,
+	rl.uv_risk_level as uv_risk_level
+	from tb_risk_level rl
+	group by rl.uv_index_rounded, rl.uv_risk_level
+)
+select sum(urlc.ct_uv_risk_level) as sum_uv_risk_level,
+urlc.uv_risk_level, 
+round(sum(urlc.ct_uv_risk_level) * 100 / 365, 2) as percentual_uv_risk_level
+from tb_uv_risk_level_count urlc
+group by urlc.uv_risk_level;
