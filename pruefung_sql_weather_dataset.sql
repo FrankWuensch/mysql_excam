@@ -145,6 +145,59 @@ case
 	else 1
 end, gwr.country, gwr.timezone;
 
+/* ------------------------------------
+ * Analysen deutschlandweit - Aufgabe 1
+ ----------------------------------- */
+
+/*
+ * Finde
+ * - die Anzahl sonniger Tage (cloud < 50) und kein Niederschlag
+ * - die Anzahl bewölkter Tage (cloud >= 50) und kein Niederschlag
+ * - die Anzahl Tage mit Niederschlag (precip_mm > 0)
+ * 2025 in Deutschland (Berlin)
+ */
+create or replace view v_weather_germany_2025 as (
+	select gwr.location_name,
+	gwr.country,
+	gwr.temperature_celsius,
+	gwr.feels_like_celsius,
+	gwr.wind_kph,
+	gwr.gust_kph,
+	gwr.wind_direction,
+	gwr.pressure_mb,
+	gwr.precip_mm,
+	gwr.humidity,
+	gwr.visibility_km,
+	gwr.air_quality_carbon_monoxide,
+	gwr.air_quality_ozone,
+	gwr.air_quality_nitrogen_dioxide,
+	gwr.air_quality_sulphur_dioxide,
+	gwr.cloud
+	from GlobalWeatherRepository gwr
+	where extract(year from gwr.last_updated) = 2025
+	and gwr.location_name like '%berlin%'
+);
+
+with 
+ct_sunny_days as (
+	select count(*) as sunny_days 
+	from v_weather_germany_2025 vwg 
+	where vwg.cloud < 50  -- Bewölkung kleiner 50%
+	and not vwg.precip_mm > 0.0  -- und kein Niederschlag
+), 
+ct_cloudy_days as (
+	select count(*) as cloudy_days
+	from v_weather_germany_2025 vwg 
+	where vwg.cloud >= 50  -- Bewölkung größer / gleich 50%
+	and not vwg.precip_mm > 0.0  -- und kein Niederschlag
+), 
+ct_rainy_days as (
+	select count(*) as rainy_days
+	from v_weather_germany_2025 vwg 
+	where vwg.precip_mm > 0.0
+)
+select * from ct_sunny_days, ct_cloudy_days, ct_rainy_days;
+
 /*
  * Finde die 10 heißesten Orte in der europäischen Zeitzone im Jahr 2025
  */
