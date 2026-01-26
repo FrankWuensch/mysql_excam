@@ -27,8 +27,8 @@
         - [ ] Anzahl sonniger Tage
         - [ ] Anzahl bewölkter Tage
         - [ ] Anzahl Tage mit Niederschlag
-        - [ ] Welche 10 Orte haben die höchste bzw. niedrigste Jahresdurchschnittstemperatur 2025 innerhalb der europäischen Zeitzone?
-        - [ ] Bewertung des Sonnenbrandrisikos in Deutschland
+        - [x] Welche 10 Orte haben die höchste bzw. niedrigste Jahresdurchschnittstemperatur 2025 innerhalb der europäischen Zeitzone?
+        - [x] Bewertung des Sonnenbrandrisikos in Deutschland
         - [ ] Aggregationen
             - [ ] monatlich
             - [ ] quartalsweise
@@ -36,9 +36,9 @@
         - [ ] Visualisierung von Trends & Auffälligkeiten (Power BI)
 - [ ] Frage 2
     - [ ] Welche Orte weltweit weisen extreme Temperatur- und Luftverschmutzungsprofile auf und welche Wetterfaktoren stehen damit in Zusammenhang?
-        - [ ] Welche 10 Orte haben die höchste bzw. niedrigste Jahresdurchschnittstemperatur?
-        - [ ] Wo traten die globale Höchst- und Tiefsttemperatur auf?
-        - [ ] Besteht ein Zusammenhang zwischen Luftverschmutzung und Wetterparametern wie Temperatur, Niederschlag oder Bewölkung?
+        - [x] Welche 10 Orte haben die höchste bzw. niedrigste Jahresdurchschnittstemperatur?
+        - [x] Wo traten die globale Höchst- und Tiefsttemperatur auf?
+        - [x] Besteht ein Zusammenhang zwischen Luftverschmutzung und Wetterparametern wie Temperatur, Niederschlag oder Bewölkung?
 
 ### Begründung für die Wahl des Datensatzes und die Wahl der Fragestellungen
 - Datensatz eigenet sich aufgrund der guten Datenlage für das Jahr 2025 hervorragend für tiefgreifende Analysen 
