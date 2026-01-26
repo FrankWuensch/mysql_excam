@@ -2,8 +2,20 @@ create database if not exists weather;
 
 use weather;
 
+/* 
+ * Zu Beginn alle existierenden Funktionen löschen hat den Vorteil,
+ * dass wenn man die Funktion ändert, die Funktionen nach dem Löschen 
+ * automatisch mit den neuen Änderungen erstellt werden, wenn man den
+ * entsprechenden Abschnitt nochmals ausführt.
+ * 
+ * Bei Nutzung mit DBeaver gilt zu beachten, dass man alle Zeilen
+ * von delimiter // bis delimiter ; gleichzeitig markieren muss und anschließend
+ * auf Skript ausführen klicken muss. Anderenfalls werden die Funktionen nicht
+ * korrekt erstellt und können im weiteren Verlauf nicht verwendet werden!
+ */
 drop function if exists get_correlation_category;
 drop function if exists get_uv_risk;
+drop function if exists get_season;
 
 /* 
  * Anzahl Datensätze für das Jahr 2025 erfassen
@@ -54,7 +66,39 @@ begin
 	end if; 
 end //
 
+/* 
+ * Funktion zur Einteilung der Daten in Quartale
+ * Achtung: Zeitraum startet am 21. Dezember für Winter
+ * und endet mit dem 20. Dezember für Herbst, da ich mich
+ * an den kalendarischen Anfängen orientiere!
+ */
+create function get_season(value varchar(50))
+returns varchar(30)
+deterministic
+begin
+	if value between date('2024-12-21') and date('2025-03-19') then 
+		return 'winter';
+	elseif value between date('2025-03-20') and date('2025-06-20') then
+		return 'spring';
+	elseif value between date('2025-06-21') and date('2025-09-21') then
+		return 'summer';
+	elseif value between date('2025-09-22') and date('2025-12-20') then
+		return 'autumn';
+	else
+		return null;
+	end if;
+end //
+
 delimiter ;
+
+/*
+ * Funktionstests
+ */
+
+select get_correlation_category(0.5) as correlation_category;  -- Erwartet: 'strong correlation'
+select get_uv_risk(7) as uv_risk_level;  -- Erwartet: 'high risk'
+select get_season('2024-12-21') as season;  -- Erwartet: 'winter'
+select get_season('2024-12-20') as season;  -- Erwartet: null
 
 /*
  * Mit den folgenden Abfragen verschaffe ich mir einen grundsätzlichen Überblick über 
@@ -189,6 +233,9 @@ limit 10;
 /*
  * Gibt es einen Zusammenhang zwischen der Sichtweite in km und der Luftfeuchtigkeit?
  * Wie stark ist dieser Zusammenhang?
+ * 
+ * Verwendung von stddev_pop sorgt dafür, dass NULL-Werte automatisch ignoriert werden
+ * (ähnlich wie COALESCE(0))
  */
 select 
 round((avg(gwr.visibility_km * gwr.humidity) - avg(gwr.visibility_km) * avg(gwr.humidity)) /
@@ -328,7 +375,7 @@ with tb_risk_level as (
 	count(get_uv_risk(round(gwr.uv_index))) as ct_uv_risk_level,
 	get_uv_risk(round(gwr.uv_index)) as uv_risk_level
 	from GlobalWeatherRepository gwr 
-	where gwr.location_name = 'Berlin' 
+	where gwr.location_name like '%berlin%'
 	and extract(year from gwr.last_updated) = 2025
 	group by uv_index_rounded, gwr.uv_index, uv_risk_level
 	order by 
