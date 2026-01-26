@@ -5,6 +5,13 @@ use weather;
 drop function if exists get_correlation_category;
 drop function if exists get_uv_risk;
 
+/* 
+ * Anzahl Datensätze für das Jahr 2025 erfassen
+ * Sollte > 32000 Datensätze sein
+ */
+select count(*) as ct_lines from GlobalWeatherRepository gwr 
+where extract(year from gwr.last_updated ) = 2025;
+
 delimiter //
 
 /*
@@ -49,9 +56,21 @@ end //
 
 delimiter ;
 
+/*
+ * Mit den folgenden Abfragen verschaffe ich mir einen grundsätzlichen Überblick über 
+ * die vorhandenen Daten in der Datenbanktabelle
+ */
 select gwr.country, gwr.timezone from GlobalWeatherRepository gwr
 group by gwr.country, gwr.timezone
 order by gwr.timezone, gwr.country;
+
+select distinct gwr.country, count(gwr.country)
+from GlobalWeatherRepository gwr 
+group by gwr.country;
+
+select count(*) as ct_days from GlobalWeatherRepository gwr 
+where extract(year from gwr.last_updated) = 2025
+and gwr.location_name like '%berlin%';
 
 /*
  * Durchschnittliche Wetterbedingungen hinsichtlich Zeitzonen und Länder 2025
@@ -228,9 +247,25 @@ order by max(gwr.uv_index) desc
 limit 1;
 
 /*
+ * Finde alle Orte, die 2025 einen maximalen UV Index von >= 11 aufwiesen.
+ * Ab diesem UV Index bekommt man unabhängig von Sonnenschutzmitteln innerhalb
+ * von wenigen Minuten einen Sonnenbrand. Die Besten Schutzmaßnahmen sind an
+ * diesen Orten die vollständige Bedeckung mit Kleidungsstücken.
+ */
+
+select max(gwr.uv_index) as max_uv_index,
+gwr.location_name,
+gwr.country
+from GlobalWeatherRepository gwr
+where extract(year from gwr.last_updated) = 2025
+and gwr.uv_index >= 11
+group by gwr.location_name, gwr.country
+order by max(gwr.uv_index) desc;
+
+/*
  * Finde die Rangordnung der verschiedenen Windrichtungen in Berlin 2025 heraus
  * Erwartetes Ergebnis: 
- * Westwind sollte am häufigsten in der Liste erscheinen, da dies die bekannte Wetterseite ist.
+ * Westwind sollte an Platz 1 in der Liste erscheinen, da dies die bekannte Wetterseite ist.
  * 
  * Hierzu wird eine neue Spalte hinter der Windrichtung eingefügt, in der nur die Aufteilung
  * in Nord, Ost, Süd und West erfolgt.
@@ -238,6 +273,11 @@ limit 1;
  * Eingruppierung sollte identisch sein zu N, E, S und W in der Spalte wind_direction
  */
 alter table GlobalWeatherRepository add column wind_direction_group varchar(8) after wind_direction;
+
+/* 
+ * Safe update mode ausschalten, da ich mehrere Werte gleichzeitig aktualisieren möchte
+ */
+set sql_safe_updates = 0;
 
 update GlobalWeatherRepository
 set wind_direction_group = 
@@ -252,6 +292,11 @@ case
     when wind_degree between 258.75 and 281.25 then 'West'
     else null
 end;
+
+/* 
+ * Safe update mode wieder einschalten
+ */
+set sql_safe_updates = 1;
 
 with wind_counts as (
     select 
@@ -304,6 +349,6 @@ select rl.uv_index_rounded as uv_index_rounded,
 )
 select sum(urlc.ct_uv_risk_level) as sum_uv_risk_level,
 urlc.uv_risk_level, 
-round(sum(urlc.ct_uv_risk_level) * 100 / 365, 2) as percentual_uv_risk_level
+round(sum(urlc.ct_uv_risk_level) * 100 / 365, 2) as percentual_risk_level
 from tb_uv_risk_level_count urlc
 group by urlc.uv_risk_level;
