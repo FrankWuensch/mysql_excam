@@ -7,11 +7,14 @@ drop function if exists get_uv_risk;
 
 delimiter //
 
+/*
+ * Funktion zur Kategorisierung eines Korrelationswertes
+ */
 create function get_correlation_category(value decimal(3, 2))
 returns varchar(20)
 deterministic
 begin 
-    if abs(value) >= 0.5 then
+    if abs(value) >= 0.5 then  -- ABS verwendet den Betrag der Zahl, also ohne Beachtung des Vorzeichens
         return 'strong correlation';
     elseif abs(value) >= 0.3 then
         return 'medium correlation';
@@ -22,6 +25,9 @@ begin
     end if;
 end //
 
+/*
+ * Funktion zur Einschätzung des Sonnenbrandrisikos anhand der gemessenen UV Strahlung
+ */
 create function get_uv_risk(value integer)
 returns varchar(30)
 deterministic
@@ -47,7 +53,14 @@ select gwr.country, gwr.timezone from GlobalWeatherRepository gwr
 group by gwr.country, gwr.timezone
 order by gwr.timezone, gwr.country;
 
--- average weather conditions by timezones and countries 2025
+/*
+ * Durchschnittliche Wetterbedingungen hinsichtlich Zeitzonen und Länder 2025
+ * Sortiert wird nach Ländern in der europäischen Zeitzone;
+ * innerhalb der Zeitzonen wird alphabetisch aufsteigend nach Land sortiert
+ * 
+ * Die Abfrage wird als View v_grouped_timezones abgespeichert, um die Daten nicht
+ * bei jeder Abfrage neu filtern zu müssen.
+ */
 create or replace view v_grouped_timezones as 
 select gwr.country, 
 gwr.timezone, 
@@ -69,7 +82,9 @@ case
 	else 1
 end, gwr.country, gwr.timezone;
 
--- get the 10 hottest places in european timezone 2025
+/*
+ * Finde die 10 heißesten Orte in der europäischen Zeitzone im Jahr 2025
+ */
 select vgt.country, 
 round(avg(vgt.avg_temperature_celsius), 2) as avg_temperature_celsius,
 dense_rank() over(order by avg(vgt.avg_temperature_celsius) desc) as `ranking`
@@ -79,7 +94,9 @@ group by vgt.country
 order by `ranking`, vgt.country
 limit 10;
 
--- get the 10 coldest places in european timezone 2025
+/*
+ * Finde die 10 kältesten Orte in der europäischen Zeitzone im Jahr 2025
+ */
 select vgt.country, 
 round(avg(vgt.avg_temperature_celsius), 2) as avg_temperature_celsius,
 dense_rank() over(order by avg(vgt.avg_temperature_celsius)) as `ranking`
@@ -89,7 +106,9 @@ group by vgt.country
 order by `ranking`, vgt.country
 limit 10;
 
--- get the 5 highest temperatures ever in 2025
+/*
+ * Finde die 10 heißesten Orte weltweit im Jahr 2025
+ */
 select gwr.temperature_celsius as max_temperature_celsius,
 gwr.location_name,
 gwr.country,
@@ -97,9 +116,11 @@ gwr.last_updated
 from GlobalWeatherRepository gwr
 where extract(year from gwr.last_updated) = 2025
 order by gwr.temperature_celsius desc 
-limit 5;
+limit 10;
 
--- get the 5 lowest temperatures ever in 2025
+/*
+ * Finde die 10 kältesten Orte weltweit im Jahr 2025
+ */
 select gwr.temperature_celsius as max_temperature_celsius,
 gwr.location_name,
 gwr.country,
@@ -107,9 +128,11 @@ gwr.last_updated
 from GlobalWeatherRepository gwr
 where extract(year from gwr.last_updated) = 2025
 order by gwr.temperature_celsius 
-limit 5;
+limit 10;
 
--- get strongest wind gust ever in 2025
+/* 
+ * Finde die weltweit höchste Windgeschwindigkeit einer 2025 auftretenden Windböe
+ */
 select gwr.gust_kph as max_gusts_kph,
 gwr.wind_kph,
 gwr.location_name,
@@ -118,17 +141,6 @@ gwr.last_updated
 from GlobalWeatherRepository gwr 
 where extract(year from gwr.last_updated) = 2025
 order by gwr.gust_kph desc 
-limit 1;
-
--- get lowest wind gust ever in 2025
-select gwr.gust_kph as max_gusts_kph,
-gwr.wind_kph,
-gwr.location_name,
-gwr.country,
-gwr.last_updated
-from GlobalWeatherRepository gwr 
-where extract(year from gwr.last_updated) = 2025
-order by gwr.gust_kph 
 limit 1;
 
 -- get the 10 locations with the most bad monthly average for air quality of carbon monoxide ever in 2025
