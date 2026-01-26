@@ -24,15 +24,15 @@
 ### Konkrete Fragestellungen
 - [ ] Frage 1
     - [ ] Wie verändert sich das Wetterprofil in Deutschland im Jahresverlauf 2025 und lassen sich klare saisonale Muster erkennen?
-        - [ ] Anzahl sonniger Tage
-        - [ ] Anzahl bewölkter Tage
-        - [ ] Anzahl Tage mit Niederschlag
+        - [x] Anzahl sonniger Tage
+        - [x] Anzahl bewölkter Tage
+        - [x] Anzahl Tage mit Niederschlag
         - [x] Welche 10 Orte haben die höchste bzw. niedrigste Jahresdurchschnittstemperatur 2025 innerhalb der europäischen Zeitzone?
         - [x] Bewertung des Sonnenbrandrisikos in Deutschland
         - [ ] Aggregationen
             - [ ] monatlich
-            - [ ] quartalsweise
-            - [ ] nach definierten Jahreszeiten (siehe [hier](#zielsetzungen-der-analyse))
+            - [x] quartalsweise
+            - [x] nach definierten Jahreszeiten (siehe [hier](#zielsetzungen-der-analyse))
         - [ ] Visualisierung von Trends & Auffälligkeiten (Power BI)
 - [ ] Frage 2
     - [ ] Welche Orte weltweit weisen extreme Temperatur- und Luftverschmutzungsprofile auf und welche Wetterfaktoren stehen damit in Zusammenhang?

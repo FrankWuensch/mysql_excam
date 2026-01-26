@@ -72,7 +72,7 @@ end //
  * und endet mit dem 20. Dezember für Herbst, da ich mich
  * an den kalendarischen Anfängen orientiere!
  */
-create function get_season(value varchar(50))
+create function get_season(value date)
 returns varchar(30)
 deterministic
 begin
@@ -94,9 +94,15 @@ delimiter ;
 /*
  * Funktionstests
  */
+select get_correlation_category(0.5) as correlation_category;   -- Erwartet: 'strong correlation'
+select get_correlation_category(0.3) as correlation_category;   -- Erwartet: 'medium correlation'
+select get_correlation_category(0.1) as correlation_category;   -- Erwartet: 'small correlation'
+select get_correlation_category(-0.1) as correlation_category;  -- Erwartet: 'small correlation'
+select get_correlation_category(-0.3) as correlation_category;  -- Erwartet: 'medium correlation'
+select get_correlation_category(-0.5) as correlation_category;  -- Erwartet: 'strong correlation'
 
-select get_correlation_category(0.5) as correlation_category;  -- Erwartet: 'strong correlation'
 select get_uv_risk(7) as uv_risk_level;  -- Erwartet: 'high risk'
+
 select get_season('2024-12-21') as season;  -- Erwartet: 'winter'
 select get_season('2024-12-20') as season;  -- Erwartet: null
 
@@ -149,12 +155,9 @@ end, gwr.country, gwr.timezone;
  * Analysen deutschlandweit - Aufgabe 1
  ----------------------------------- */
 
-/*
- * Finde
- * - die Anzahl sonniger Tage (cloud < 50) und kein Niederschlag
- * - die Anzahl bewölkter Tage (cloud >= 50) und kein Niederschlag
- * - die Anzahl Tage mit Niederschlag (precip_mm > 0)
- * 2025 in Deutschland (Berlin)
+/* 
+ * Erstellen einer View, die alle Wetterdaten für das Jahr 2025 in Deutschland speichert
+ * Verwendung für Analysen, die sich auf die Monate oder das gesamte Jahr beziehen
  */
 create or replace view v_weather_germany_2025 as (
 	select gwr.location_name,
@@ -178,6 +181,41 @@ create or replace view v_weather_germany_2025 as (
 	and gwr.location_name like '%berlin%'
 );
 
+/* 
+ * Erstellen einer View, die alle Wetterdaten im Zeitraum 21.12.2024 bis 20.12.2025 in Deutschland speichert
+ * Verwendung ausschließlich für Analysen, die auf die Saison bezogen sind
+ */
+create or replace view v_weather_germany_seasons as (
+	select gwr.location_name,
+	gwr.country,
+	gwr.temperature_celsius,
+	gwr.feels_like_celsius,
+	gwr.wind_kph,
+	gwr.gust_kph,
+	gwr.wind_direction,
+	gwr.pressure_mb,
+	gwr.precip_mm,
+	gwr.humidity,
+	gwr.visibility_km,
+	gwr.air_quality_carbon_monoxide,
+	gwr.air_quality_ozone,
+	gwr.air_quality_nitrogen_dioxide,
+	gwr.air_quality_sulphur_dioxide,
+	gwr.cloud,
+	gwr.last_updated,
+	get_season(gwr.last_updated) as season
+	from GlobalWeatherRepository gwr
+	where gwr.last_updated between date('2024-12-21') and date('2025-12-20')
+	and gwr.location_name like '%berlin%'
+);
+
+/*
+ * Finde
+ * - die Anzahl sonniger Tage (cloud < 50) und kein Niederschlag
+ * - die Anzahl bewölkter Tage (cloud >= 50) und kein Niederschlag
+ * - die Anzahl Tage mit Niederschlag (precip_mm > 0)
+ * 2025 in Deutschland (Berlin)
+ */
 with 
 ct_sunny_days as (
 	select count(*) as sunny_days 
@@ -197,6 +235,31 @@ ct_rainy_days as (
 	where vwg.precip_mm > 0.0
 )
 select * from ct_sunny_days, ct_cloudy_days, ct_rainy_days;
+
+/*
+ * Finde
+ * - die Anzahl sonniger Tage (cloud < 50) und kein Niederschlag
+ * - die Anzahl bewölkter Tage (cloud >= 50) und kein Niederschlag
+ * - die Anzahl Tage mit Niederschlag (precip_mm > 0)
+ * 2025 in Deutschland (Berlin)
+ * bezogen auf die Saison
+ */
+select
+coalesce(season, 'TOTAL'),
+count(
+case 
+	when cloud < 50 and not precip_mm > 0 then 1 
+end) as sunny_days,
+count(
+case 
+	when cloud >= 50 and not precip_mm > 0 then 1 
+end) as cloudy_days,
+count(
+case 
+	when precip_mm > 0 then 1 
+end) as rainy_days
+from v_weather_germany_seasons
+group by season with rollup;
 
 /*
  * Finde die 10 heißesten Orte in der europäischen Zeitzone im Jahr 2025
