@@ -171,9 +171,11 @@ case
 	else 1
 end, gwr.country, gwr.timezone;
 
-/* ------------------------------------
- * Analysen deutschlandweit - Aufgabe 1
- ----------------------------------- */
+
+/* ---------------------------------------------------
+ * Analysen deutschlandweit und europaweit - Aufgabe 1
+ -------------------------------------------------- */
+
 
 /* 
  * Erstellen einer View, die alle Wetterdaten für das Jahr 2025 in Deutschland speichert
@@ -196,7 +198,7 @@ create or replace view v_weather_germany_2025 as (
 	gwr.air_quality_nitrogen_dioxide,
 	gwr.air_quality_sulphur_dioxide,
 	gwr.cloud,
-	get_month(gwr.last_updated) as `month`
+	get_month(date_format(gwr.last_updated, '%Y-%m-%d')) as `month`
 	from GlobalWeatherRepository gwr
 	where extract(year from gwr.last_updated) = 2025
 	and gwr.location_name like '%berlin%'
@@ -224,9 +226,9 @@ create or replace view v_weather_germany_seasons as (
 	gwr.air_quality_sulphur_dioxide,
 	gwr.cloud,
 	gwr.last_updated,
-	get_season(gwr.last_updated) as season
+	get_season(date_format(gwr.last_updated, '%Y-%m-%d')) as season
 	from GlobalWeatherRepository gwr
-	where gwr.last_updated between date('2024-12-21') and date('2025-12-20')
+	where date_format(gwr.last_updated, '%Y-%m-%d') between date('2024-12-21') and date('2025-12-20')
 	and gwr.location_name like '%berlin%'
 );
 
@@ -266,7 +268,7 @@ select * from ct_sunny_days, ct_cloudy_days, ct_rainy_days;
  * bezogen auf die Saison
  */
 select
-coalesce(season, 'TOTAL') as `season`,
+coalesce(vws.season, 'TOTAL') as `season`,
 count(
 case 
 	when cloud < 50 and not precip_mm > 0 then 1 
@@ -279,13 +281,13 @@ count(
 case 
 	when precip_mm > 0 then 1 
 end) as rainy_days
-from v_weather_germany_seasons
-group by season with rollup
+from v_weather_germany_seasons vws
+group by vws.season with rollup
 order by 
 case
-	when season like 'win%' then 0
-	when season like 'spr%' then 1
-	when season like 'sum%' then 2
+	when vws.season like 'win%' then 0
+	when vws.season like 'spr%' then 1
+	when vws.season like 'sum%' then 2
 	else 3
 end;
 
@@ -298,7 +300,7 @@ end;
  * bezogen auf die Monate Januar bis Dezember 2025
  */
 select
-coalesce(`month`, 'TOTAL') as `month`,
+coalesce(vwg.`month`, 'TOTAL') as `month`,
 count(
 case 
 	when cloud < 50 and not precip_mm > 0 then 1 
@@ -312,20 +314,20 @@ case
 	when precip_mm > 0 then 1 
 end) as rainy_days
 from v_weather_germany_2025 vwg 
-group by `month` with rollup
+group by vwg.`month` with rollup
 order by 
 case
-	when `month` like 'Jan%' then 0
-	when `month` like 'Feb%' then 1
-	when `month` like 'Mar%' then 2
-	when `month` like 'Apr%' then 3
-	when `month` like 'May'  then 4
-	when `month` like 'Jun%' then 5
-	when `month` like 'Jul%' then 6
-	when `month` like 'Aug%' then 7
-	when `month` like 'Sep%' then 8
-	when `month` like 'Oct%' then 9
-	when `month` like 'Nov%' then 10
+	when vwg.`month` like 'Jan%' then 0
+	when vwg.`month` like 'Feb%' then 1
+	when vwg.`month` like 'Mar%' then 2
+	when vwg.`month` like 'Apr%' then 3
+	when vwg.`month` like 'May'  then 4
+	when vwg.`month` like 'Jun%' then 5
+	when vwg.`month` like 'Jul%' then 6
+	when vwg.`month` like 'Aug%' then 7
+	when vwg.`month` like 'Sep%' then 8
+	when vwg.`month` like 'Oct%' then 9
+	when vwg.`month` like 'Nov%' then 10
 	else 11
 end;
 
@@ -352,6 +354,12 @@ where vgt.timezone like '%europe%'
 group by vgt.country
 order by `ranking`, vgt.country
 limit 10;
+
+
+/* ---------------------------------------------------------
+ * Analysen weltweit mit Fokus auf Wetterextreme - Aufgabe 2
+ -------------------------------------------------------- */
+
 
 /*
  * Finde die 10 Orte mit der höchsten Durchschnittstemperatur weltweit im Jahr 2025
