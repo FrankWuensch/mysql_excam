@@ -36,7 +36,7 @@ DELIMITER //
 /*
  * Funktion zur Kategorisierung eines Korrelationswertes
  */
-CREATE FUNCTION get_correlation_category(value DECIMAL(3, 2))
+CREATE FUNCTION get_correlation_category(value DECIMAL(4, 2))
 RETURNS VARCHAR(20)
 DETERMINISTIC
 BEGIN 
@@ -47,7 +47,7 @@ BEGIN
     ELSEIF ABS(value) >= 0.1 THEN
         RETURN 'small correlation';
     ELSE
-        RETURN 'no significant correlation';
+        RETURN 'no correlation';
     END IF;
 END //
 
@@ -578,6 +578,69 @@ SELECT @corr_pm2_5_VS_pm10 AS `Correlation value between micro dust < 2.5 microm
 get_correlation_category(@corr_pm2_5_VS_pm10) AS `Correlation category`;
 
 /*
+ * Aufgrund der hohen Korrelation zwischen der Menge an Feinstaubpartikeln untereinander
+ * betrachte ich im folgenden die Korrelationen zu Feinstaub nur für Feinstaubpartikel < 10 Mikrometer,
+ * da diese wahrscheinlich z.T. oder ganz die Menge der Feinstaubpartikel < 2.5 enthalten
+ * (vermutlich kommt daher der hohe Korrelationswert)
+ */
+
+/*
+ * Gibt es einen Zusammenhang zwischen der Menge an Feinstaubpartikeln < 10 Mikrometern
+ * und der Temperatur?
+ * Wie stark ist dieser Zusammenhang?
+ */
+SELECT 
+ROUND((AVG(gwr.air_quality_pm10 * gwr.temperature_celsius) - AVG(gwr.air_quality_pm10) * AVG(gwr.temperature_celsius)) /
+(STDDEV_POP(gwr.air_quality_pm10) * STDDEV_POP(gwr.temperature_celsius)), 2) AS c_air_quality_pm10_VS_temperature_celsius
+FROM GlobalWeatherRepository gwr INTO @corr_pm10_VS_temperature_celsius;
+
+SELECT @corr_pm10_VS_temperature_celsius AS `Correlation value between micro dust < 10 micrometer and temperature in °C`,
+get_correlation_category(@corr_pm10_VS_temperature_celsius) AS `Correlation category`;
+
+/*
+ * Gibt es einen Zusammenhang zwischen der Menge an Feinstaubpartikeln < 10 Mikrometern
+ * und der Niederschlagsmenge?
+ * Wie stark ist dieser Zusammenhang?
+ */
+SELECT 
+ROUND((AVG(gwr.air_quality_pm10 * gwr.precip_mm) - AVG(gwr.air_quality_pm10) * AVG(gwr.precip_mm)) /
+(STDDEV_POP(gwr.air_quality_pm10) * STDDEV_POP(gwr.precip_mm)), 2) AS c_air_quality_pm10_VS_precip_mm
+FROM GlobalWeatherRepository gwr INTO @corr_pm10_VS_precip_mm;
+
+SELECT @corr_pm10_VS_precip_mm AS `Correlation value between micro dust < 10 micrometer and amount of rain`,
+get_correlation_category(@corr_pm10_VS_precip_mm) AS `Correlation category`;
+
+/*
+ * Gibt es einen Zusammenhang zwischen der Menge an Feinstaubpartikeln < 10 Mikrometern
+ * und der Bewölkung?
+ * Wie stark ist dieser Zusammenhang?
+ */
+SELECT 
+ROUND((AVG(gwr.air_quality_pm10 * gwr.cloud) - AVG(gwr.air_quality_pm10) * AVG(gwr.cloud)) /
+(STDDEV_POP(gwr.air_quality_pm10) * STDDEV_POP(gwr.cloud)), 2) AS c_air_quality_pm10_VS_cloud
+FROM GlobalWeatherRepository gwr INTO @corr_pm10_VS_cloud;
+
+SELECT @corr_pm10_VS_cloud AS `Correlation value between micro dust < 10 micrometer and amount of clouds`,
+get_correlation_category(@corr_pm10_VS_cloud) AS `Correlation category`;
+
+/*
+ * Gibt es einen Zusammenhang zwischen der Menge an Feinstaubpartikeln < 10 Mikrometern
+ * und der Sichtweite in km?
+ * Wie stark ist dieser Zusammenhang?
+ */
+SELECT 
+ROUND((AVG(gwr.air_quality_pm10 * gwr.visibility_km) - AVG(gwr.air_quality_pm10) * AVG(gwr.visibility_km)) /
+(STDDEV_POP(gwr.air_quality_pm10) * STDDEV_POP(gwr.visibility_km)), 2) AS c_air_quality_pm10_VS_visibility_km
+FROM GlobalWeatherRepository gwr INTO @corr_pm10_VS_visibility_km;
+
+SELECT @corr_pm10_VS_visibility_km AS `Correlation value between micro dust < 10 micrometer and the visibility in km`,
+get_correlation_category(@corr_pm10_VS_visibility_km) AS `Correlation category`;
+
+/* 
+ * Analyse weiterer möglicherweise interessanter Zusammenhänge als Zusatz
+ */
+
+/*
  * Gibt es einen Zusammenhang zwischen der Sichtweite in km und der Luftfeuchtigkeit?
  * Wie stark ist dieser Zusammenhang?
  */
@@ -628,13 +691,12 @@ get_correlation_category(@corr_ozone_VS_uv_index) AS `Correlation category`;
 /*
  * Finde den Ort und den Zeitpunkt mit dem höchsten Wert des UV Index weltweit 2025
  */
-SELECT MAX(gwr.uv_index) AS max_uv_index,
+SELECT gwr.uv_index AS max_uv_index,
 gwr.location_name,
 gwr.country
 FROM GlobalWeatherRepository gwr
 WHERE EXTRACT(YEAR FROM gwr.last_updated) = 2025
-GROUP BY gwr.location_name, gwr.country
-ORDER BY MAX(gwr.uv_index) DESC
+ORDER BY gwr.uv_index DESC
 LIMIT 1;
 
 /*
@@ -645,14 +707,13 @@ LIMIT 1;
  * ausschließlich in geschlossenen Räumen.
  */
 
-SELECT MAX(gwr.uv_index) AS max_uv_index,
+SELECT gwr.uv_index AS max_uv_index,
 gwr.location_name,
 gwr.country
 FROM GlobalWeatherRepository gwr
 WHERE EXTRACT(YEAR FROM gwr.last_updated) = 2025
 AND gwr.uv_index >= 11
-GROUP BY gwr.location_name, gwr.country
-ORDER BY MAX(gwr.uv_index) DESC;
+ORDER BY gwr.uv_index DESC;
 
 /*
  * Finde die Rangordnung der verschiedenen Windrichtungen in Berlin 2025 heraus
@@ -664,7 +725,7 @@ ORDER BY MAX(gwr.uv_index) DESC;
  * Erwartetes Ergebnis: 
  * Eingruppierung sollte identisch sein zu N, E, S und W in der Spalte wind_direction
  */
-ALTER TABLE GlobalWeatherRepository ADD COLUMN wind_direction_group VARCHAR(8) after wind_direction;
+ALTER TABLE GlobalWeatherRepository ADD COLUMN wind_direction_group VARCHAR(8) AFTER wind_direction;
 
 /* 
  * Safe update mode ausschalten, da ich mehrere Werte gleichzeitig aktualisieren möchte

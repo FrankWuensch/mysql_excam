@@ -34,8 +34,8 @@
             - [x] quartalsweise
             - [x] nach definierten Jahreszeiten (siehe [hier](#zielsetzungen-der-analyse))
         - [ ] Visualisierung von Trends & Auffälligkeiten (Power BI)
-- [ ] Frage 2
-    - [ ] Welche Orte weltweit weisen extreme Temperatur- und Luftverschmutzungsprofile auf und welche Wetterfaktoren stehen damit in Zusammenhang?
+- [x] Frage 2
+    - [x] Welche Orte weltweit weisen extreme Temperatur- und Luftverschmutzungsprofile auf und welche Wetterfaktoren stehen damit in Zusammenhang?
         - [x] Welche 10 Orte haben die höchste bzw. niedrigste Jahresdurchschnittstemperatur?
         - [x] Wo traten die globale Höchst- und Tiefsttemperatur auf?
         - [x] Besteht ein Zusammenhang zwischen Luftverschmutzung und Wetterparametern wie Temperatur, Niederschlag oder Bewölkung?
