@@ -23,14 +23,14 @@
 
 ### Konkrete Fragestellungen
 - [ ] Frage 1
-    - [ ] Wie verändert sich das Wetterprofil in Deutschland im Jahresverlauf 2025 und lassen sich klare saisonale Muster erkennen?
+    - [x] Wie verändert sich das Wetterprofil in Deutschland im Jahresverlauf 2025 und lassen sich klare saisonale Muster erkennen?
         - [x] Anzahl sonniger Tage
         - [x] Anzahl bewölkter Tage
         - [x] Anzahl Tage mit Niederschlag
         - [x] Welche 10 Orte haben die höchste bzw. niedrigste Jahresdurchschnittstemperatur 2025 innerhalb der europäischen Zeitzone?
         - [x] Bewertung des Sonnenbrandrisikos in Deutschland
-        - [ ] Aggregationen
-            - [ ] monatlich
+        - [x] Aggregationen
+            - [x] monatlich
             - [x] quartalsweise
             - [x] nach definierten Jahreszeiten (siehe [hier](#zielsetzungen-der-analyse))
         - [ ] Visualisierung von Trends & Auffälligkeiten (Power BI)

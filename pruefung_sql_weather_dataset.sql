@@ -17,6 +17,7 @@ drop function if exists get_correlation_category;
 drop function if exists get_uv_risk;
 drop function if exists get_season;
 drop function if exists get_month;
+drop function if exists get_gb_defra_category;
 
 /* 
  * Hinzufügen einer ID Spalte als Primary Key
@@ -105,6 +106,24 @@ begin
 	return date_format(value, '%M');
 end //
 
+/*
+ * Funktion zur Kategorisierung des Britischen Luftqualitätsindex
+ */
+create function get_gb_defra_category(value double) 
+returns varchar(30)
+deterministic
+begin 
+	if value between 7.5 and 10.0 then 
+		return 'very high';
+	elseif value between 5.0 and 7.4 then 
+		return 'high';
+	elseif value between 2.5 and 4.9 then 
+		return 'medium';
+	elseif value between 0.0 and 2.4 then
+		return 'low';
+	end if;
+end //
+
 delimiter ;
 
 /*
@@ -117,14 +136,16 @@ select get_correlation_category(-0.1) as correlation_category;  -- Erwartet: 'sm
 select get_correlation_category(-0.3) as correlation_category;  -- Erwartet: 'medium correlation'
 select get_correlation_category(-0.5) as correlation_category;  -- Erwartet: 'strong correlation'
 
-select get_uv_risk(7) as uv_risk_level;  -- Erwartet: 'high risk'
+select get_uv_risk(7) as uv_risk_level;       -- Erwartet: 'high risk'
 
-select get_season('2024-12-21') as season;  -- Erwartet: 'winter'
-select get_season('2024-12-20') as season;  -- Erwartet: null
+select get_season('2024-12-21') as season;    -- Erwartet: 'winter'
+select get_season('2024-12-20') as season;    -- Erwartet: null
 
-select get_month('2025-01-04') as `month`;  -- Erwartet: 'January'
-select get_month('2025-03-20') as `month`;  -- Erwartet: 'March'
-select get_month('2024-12-21') as `month`;  -- Erwartet: 'December'
+select get_month('2025-01-04') as `month`;    -- Erwartet: 'January'
+select get_month('2025-03-20') as `month`;    -- Erwartet: 'March'
+select get_month('2024-12-21') as `month`;    -- Erwartet: 'December'
+
+select get_gb_defra_category(5) as category;  -- Erwartet: 'high'
 
 /*
  * Mit den folgenden Abfragen verschaffe ich mir einen grundsätzlichen Überblick über 
@@ -367,7 +388,7 @@ limit 10;
 select gwr.temperature_celsius as avg_min_temperatur_celsius,
 gwr.location_name,
 gwr.country,
-gwr.last_updated
+date_format(gwr.last_updated, '%M %Y') as `date`
 from GlobalWeatherRepository gwr
 where extract(year from gwr.last_updated) = 2025
 order by gwr.temperature_celsius desc
@@ -379,7 +400,7 @@ limit 10;
 select gwr.temperature_celsius as avg_min_temperatur_celsius,
 gwr.location_name,
 gwr.country,
-gwr.last_updated
+date_format(gwr.last_updated, '%M %Y') as `date`
 from GlobalWeatherRepository gwr
 where extract(year from gwr.last_updated) = 2025
 order by gwr.temperature_celsius 
