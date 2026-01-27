@@ -170,6 +170,9 @@ GROUP BY gwr.country, gwr.timezone
 HAVING COUNT(gwr.country) = 365
 ORDER BY gwr.country; 
 
+CREATE OR REPLACE VIEW pbi_countries_with_full_2025 AS
+SELECT country, `timezone` FROM v_countries_with_full_2025;
+
 /*
  * Zähle alle Länder innerhalb der europäischen Zeitzone, die vollständige Daten
  * für das Jahr 2025 enthalten
@@ -274,7 +277,34 @@ CREATE OR REPLACE VIEW v_weather_germany_seasons AS (
 	FROM GlobalWeatherRepository gwr
 	WHERE DATE_FORMAT(gwr.last_updated, '%Y-%m-%d') BETWEEN DATE('2024-12-21') AND DATE('2025-12-20')
 	AND gwr.location_name LIKE '%berlin%'
+	ORDER BY 
+	CASE
+		WHEN season LIKE 'win%' THEN 0
+		WHEN season LIKE 'spr%' THEN 1
+		WHEN season LIKE 'sum%' THEN 2
+		ELSE 3
+	END, gwr.last_updated
 );
+
+CREATE OR REPLACE VIEW pbi_weather_germany_with_seasons AS
+SELECT wgs.location_name,
+wgs.country,
+wgs.temperature_celsius,
+wgs.feels_like_celsius,
+wgs.wind_kph,
+wgs.gust_kph,
+wgs.wind_direction,
+wgs.pressure_mb,
+wgs.precip_mm,
+wgs.humidity,
+wgs.visibility_km,
+wgs.air_quality_carbon_monoxide,
+wgs.air_quality_ozone,
+wgs.air_quality_nitrogen_dioxide,
+wgs.air_quality_sulphur_dioxide,
+wgs.cloud,
+get_season(DATE_FORMAT(wgs.last_updated, '%Y-%m-%d')) AS season
+FROM v_weather_germany_seasons wgs;
 
 /*
  * Finde
@@ -426,6 +456,10 @@ END;
  * Erwartetes Ergebnis:
  * Erhöhte Werte in den Monaten Januar, März, April und Dezember wegen schwerer Waldbrände
  * in Victoria, Westaustralien und New South Wales
+ * 
+ * Fazit:
+ * Leider keine Auffälligkeiten feststellbar, weil keine Daten von den jeweiligen
+ * Orten vorhanden
  */
 WITH tb_air_quality AS (
 	SELECT gwr.location_name,
@@ -776,6 +810,7 @@ ORDER BY wc.count_per_type DESC;
 /*
  * Finde das durchschnittliche Sonnenbrandrisiko in Berlin 2025 in Prozent heraus
  */
+CREATE OR REPLACE VIEW pbi_sunburn_risk_level_berlin_2025 AS
 WITH tb_risk_level AS (
 	SELECT ROUND(gwr.uv_index) AS uv_index_rounded, 
 	COUNT(get_uv_risk(ROUND(gwr.uv_index))) AS ct_uv_risk_level,
@@ -805,3 +840,5 @@ urlc.uv_risk_level,
 ROUND(SUM(urlc.ct_uv_risk_level) * 100 / 365, 2) AS percentual_risk_level
 FROM tb_uv_risk_level_count urlc
 GROUP BY urlc.uv_risk_level;
+
+SELECT * FROM pbi_sunburn_risk_level_berlin_2025;
