@@ -353,6 +353,49 @@ case
 end;
 
 /*
+ * Zähle die Tage in Deutschland je nach Luftqualitätsindex
+ * und gruppiere sie nach Monaten zur Einschätzung der Luftqualität in Berlin 2025
+ * pro Monat
+ */
+with tb_air_quality as (
+	select gwr.location_name, 
+	get_month(date_format(gwr.last_updated, '%Y-%m-%d')) as `month`,
+	get_gb_defra_category(gwr.`air_quality_gb-defra-index`) as air_quality_category,
+	count(get_gb_defra_category(gwr.`air_quality_gb-defra-index`)) as ct_air_quality_category
+	from GlobalWeatherRepository gwr 
+	where extract(year from gwr.last_updated) = 2025
+	and gwr.location_name like '%berlin%'
+	group by `month`, gwr.`air_quality_gb-defra-index`, gwr.location_name
+)
+select aq.location_name, 
+aq.`month`,
+aq.air_quality_category,
+sum(aq.ct_air_quality_category) as ct_air_quality_category
+from tb_air_quality aq
+group by aq.air_quality_category, aq.location_name, aq.`month`
+order by 
+case
+	when `month` like 'Jan%' then 0
+	when `month` like 'Feb%' then 1
+	when `month` like 'Mar%' then 2
+	when `month` like 'Apr%' then 3
+	when `month` like 'May'  then 4
+	when `month` like 'Jun%' then 5
+	when `month` like 'Jul%' then 6
+	when `month` like 'Aug%' then 7
+	when `month` like 'Sep%' then 8
+	when `month` like 'Oct%' then 9
+	when `month` like 'Nov%' then 10
+	else 11
+end,
+case
+	when aq.air_quality_category = 'very high' then 0
+	when aq.air_quality_category = 'high' then 1 
+	when aq.air_quality_category = 'medium' then 2 
+	when aq.air_quality_category = 'low' then 3
+end;
+
+/*
  * Finde die 10 heißesten Orte in der europäischen Zeitzone im Jahr 2025
  */
 select vgt.country, 
