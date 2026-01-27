@@ -16,6 +16,12 @@ use weather;
 drop function if exists get_correlation_category;
 drop function if exists get_uv_risk;
 drop function if exists get_season;
+drop function if exists get_month;
+
+/* 
+ * Hinzufügen einer ID Spalte als Primary Key
+ */
+alter table GlobalWeatherRepository add column id integer primary key auto_increment first;
 
 /* 
  * Anzahl Datensätze für das Jahr 2025 erfassen
@@ -89,6 +95,16 @@ begin
 	end if;
 end //
 
+/* 
+ * Funktion zur Ausgabe der Monate als Text
+ */
+create function get_month(value date) 
+returns varchar(30)
+deterministic 
+begin
+	return date_format(value, '%M');
+end //
+
 delimiter ;
 
 /*
@@ -105,6 +121,10 @@ select get_uv_risk(7) as uv_risk_level;  -- Erwartet: 'high risk'
 
 select get_season('2024-12-21') as season;  -- Erwartet: 'winter'
 select get_season('2024-12-20') as season;  -- Erwartet: null
+
+select get_month('2025-01-04') as `month`;  -- Erwartet: 'January'
+select get_month('2025-03-20') as `month`;  -- Erwartet: 'March'
+select get_month('2024-12-21') as `month`;  -- Erwartet: 'December'
 
 /*
  * Mit den folgenden Abfragen verschaffe ich mir einen grundsätzlichen Überblick über 
@@ -175,7 +195,8 @@ create or replace view v_weather_germany_2025 as (
 	gwr.air_quality_ozone,
 	gwr.air_quality_nitrogen_dioxide,
 	gwr.air_quality_sulphur_dioxide,
-	gwr.cloud
+	gwr.cloud,
+	get_month(gwr.last_updated) as `month`
 	from GlobalWeatherRepository gwr
 	where extract(year from gwr.last_updated) = 2025
 	and gwr.location_name like '%berlin%'
@@ -245,7 +266,7 @@ select * from ct_sunny_days, ct_cloudy_days, ct_rainy_days;
  * bezogen auf die Saison
  */
 select
-coalesce(season, 'TOTAL'),
+coalesce(season, 'TOTAL') as `season`,
 count(
 case 
 	when cloud < 50 and not precip_mm > 0 then 1 
@@ -259,7 +280,54 @@ case
 	when precip_mm > 0 then 1 
 end) as rainy_days
 from v_weather_germany_seasons
-group by season with rollup;
+group by season with rollup
+order by 
+case
+	when season like 'win%' then 0
+	when season like 'spr%' then 1
+	when season like 'sum%' then 2
+	else 3
+end;
+
+/*
+ * Finde
+ * - die Anzahl sonniger Tage (cloud < 50) und kein Niederschlag
+ * - die Anzahl bewölkter Tage (cloud >= 50) und kein Niederschlag
+ * - die Anzahl Tage mit Niederschlag (precip_mm > 0)
+ * 2025 in Deutschland (Berlin)
+ * bezogen auf die Monate Januar bis Dezember 2025
+ */
+select
+coalesce(`month`, 'TOTAL') as `month`,
+count(
+case 
+	when cloud < 50 and not precip_mm > 0 then 1 
+end) as sunny_days,
+count(
+case 
+	when cloud >= 50 and not precip_mm > 0 then 1 
+end) as cloudy_days,
+count(
+case 
+	when precip_mm > 0 then 1 
+end) as rainy_days
+from v_weather_germany_2025 vwg 
+group by `month` with rollup
+order by 
+case
+	when `month` like 'Jan%' then 0
+	when `month` like 'Feb%' then 1
+	when `month` like 'Mar%' then 2
+	when `month` like 'Apr%' then 3
+	when `month` like 'May'  then 4
+	when `month` like 'Jun%' then 5
+	when `month` like 'Jul%' then 6
+	when `month` like 'Aug%' then 7
+	when `month` like 'Sep%' then 8
+	when `month` like 'Oct%' then 9
+	when `month` like 'Nov%' then 10
+	else 11
+end;
 
 /*
  * Finde die 10 heißesten Orte in der europäischen Zeitzone im Jahr 2025
