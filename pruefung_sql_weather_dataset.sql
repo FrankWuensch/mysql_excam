@@ -249,6 +249,7 @@ CREATE OR REPLACE VIEW v_weather_germany_2025 AS (
 	FROM GlobalWeatherRepository gwr
 	WHERE EXTRACT(YEAR FROM gwr.last_updated) = 2025
 	AND gwr.location_name LIKE '%berlin%'
+	ORDER BY gwr.last_updated
 );
 
 /* 
@@ -277,13 +278,7 @@ CREATE OR REPLACE VIEW v_weather_germany_seasons AS (
 	FROM GlobalWeatherRepository gwr
 	WHERE DATE_FORMAT(gwr.last_updated, '%Y-%m-%d') BETWEEN DATE('2024-12-21') AND DATE('2025-12-20')
 	AND gwr.location_name LIKE '%berlin%'
-	ORDER BY 
-	CASE
-		WHEN season LIKE 'win%' THEN 0
-		WHEN season LIKE 'spr%' THEN 1
-		WHEN season LIKE 'sum%' THEN 2
-		ELSE 3
-	END, gwr.last_updated
+	ORDER BY gwr.last_updated
 );
 
 CREATE OR REPLACE VIEW pbi_weather_germany_with_seasons AS
