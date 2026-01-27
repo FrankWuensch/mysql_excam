@@ -487,11 +487,29 @@ order by avg_air_quality_carbon_monoxide
 limit 10;
 
 /*
- * Gibt es einen Zusammenhang zwischen der Sichtweite in km und der Luftfeuchtigkeit?
- * Wie stark ist dieser Zusammenhang?
+ * Erkennen von Zusammenhängen zwischen verschiedenen Parametern mittels Korrelationen
  * 
  * Verwendung von stddev_pop sorgt dafür, dass NULL-Werte automatisch ignoriert werden
  * (ähnlich wie COALESCE(0))
+ */
+
+
+/*
+ * Gibt es einen Zusammenhang zwischen der Menge an Feinstaubpartikeln < 2.5 Mikrometern
+ * und der Menge an Feinstaubpartikeln < 10 Mikrometern und wie stark ist 
+ * dieser Zusammenhan?
+ */
+SELECT 
+ROUND((AVG(gwr.`air_quality_pm2.5` * gwr.air_quality_pm10) - AVG(gwr.`air_quality_pm2.5`) * AVG(gwr.air_quality_pm10)) / 
+(STDDEV_POP(gwr.`air_quality_pm2.5`) * STDDEV_POP(gwr.air_quality_pm10)), 2) AS c_air_quality_pm2_5_VS_air_quality_pm10
+FROM GlobalWeatherRepository gwr INTO @corr_pm2_5_VS_pm10;
+
+select @corr_pm2_5_VS_pm10 as `Correlation value between micro dust < 2.5 micrometer and micro dust < 10 micrometer`,
+get_correlation_category(@corr_pm2_5_VS_pm10) as `Correlation category`;
+
+/*
+ * Gibt es einen Zusammenhang zwischen der Sichtweite in km und der Luftfeuchtigkeit?
+ * Wie stark ist dieser Zusammenhang?
  */
 select 
 round((avg(gwr.visibility_km * gwr.humidity) - avg(gwr.visibility_km) * avg(gwr.humidity)) /
