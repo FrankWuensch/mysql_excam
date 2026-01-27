@@ -155,9 +155,32 @@ SELECT gwr.country, gwr.timezone FROM GlobalWeatherRepository gwr
 GROUP BY gwr.country, gwr.timezone
 ORDER BY gwr.timezone, gwr.country;
 
-SELECT DISTINCT gwr.country, COUNT(gwr.country)
+SELECT DISTINCT gwr.country, COUNT(gwr.country) AS ct_days
 FROM GlobalWeatherRepository gwr 
 GROUP BY gwr.country;
+
+/* 
+ * Liste alle Länder auf, die vollständige Daten für das Jahr 2025 enthalten
+ */
+CREATE OR REPLACE VIEW v_countries_with_full_2025 AS
+SELECT DISTINCT gwr.country, gwr.timezone, COUNT(gwr.country) AS ct_days
+FROM GlobalWeatherRepository gwr 
+WHERE EXTRACT(YEAR FROM gwr.last_updated) = 2025
+GROUP BY gwr.country, gwr.timezone
+HAVING COUNT(gwr.country) = 365
+ORDER BY gwr.country; 
+
+/*
+ * Zähle alle Länder innerhalb der europäischen Zeitzone, die vollständige Daten
+ * für das Jahr 2025 enthalten
+ */
+SELECT DISTINCT gwr.country, gwr.timezone, COUNT(gwr.country) AS ct_days
+FROM GlobalWeatherRepository gwr 
+WHERE EXTRACT(YEAR FROM gwr.last_updated) = 2025
+AND gwr.timezone LIKE '%europe%'
+GROUP BY gwr.country, gwr.timezone
+HAVING COUNT(gwr.country) = 365
+ORDER BY gwr.country; 
 
 SELECT COUNT(*) AS ct_days FROM GlobalWeatherRepository gwr 
 WHERE EXTRACT(YEAR FROM gwr.last_updated) = 2025
@@ -199,7 +222,7 @@ END, gwr.country, gwr.timezone;
 
 
 /* 
- * Erstellen einer VIEW, die alle Wetterdaten für das Jahr 2025 IN Deutschland speichert
+ * Erstellen einer VIEW, die alle Wetterdaten für das Jahr 2025 in Deutschland speichert
  * Verwendung für Analysen, die sich auf die Monate oder das gesamte Jahr beziehen
  */
 CREATE OR REPLACE VIEW v_weather_germany_2025 AS (
@@ -226,7 +249,7 @@ CREATE OR REPLACE VIEW v_weather_germany_2025 AS (
 );
 
 /* 
- * Erstellen einer VIEW, die alle Wetterdaten im Zeitraum 21.12.2024 bis 20.12.2025 IN Deutschland speichert
+ * Erstellen einer VIEW, die alle Wetterdaten im Zeitraum 21.12.2024 bis 20.12.2025 in Deutschland speichert
  * Verwendung ausschließlich für Analysen, die auf die Saison bezogen sind
  */
 CREATE OR REPLACE VIEW v_weather_germany_seasons AS (
@@ -353,14 +376,14 @@ CASE
 END;
 
 /*
- * Zähle die Tage IN Deutschland je nach Luftqualitätsindex
- * und gruppiere sie nach Monaten zur Einschätzung der Luftqualität IN Berlin 2025
+ * Zähle die Tage in Deutschland je nach Luftqualitätsindex
+ * und gruppiere sie nach Monaten zur Einschätzung der Luftqualität in Berlin 2025
  * pro Monat
  */
 WITH tb_air_quality AS (
 	SELECT gwr.location_name, 
 	get_month(DATE_FORMAT(gwr.last_updated, '%Y-%m-%d')) AS `month`,
-	get_gb_defra_category(gwr.`air_quality_gb-defra-index`) AS air_quality_category,
+	get_gb_defra_category(gwr.`air_quality_gb-defra-index`) AS air_quality_badness_category,
 	COUNT(get_gb_defra_category(gwr.`air_quality_gb-defra-index`)) AS ct_air_quality_category
 	FROM GlobalWeatherRepository gwr 
 	WHERE EXTRACT(YEAR FROM gwr.last_updated) = 2025
@@ -369,10 +392,10 @@ WITH tb_air_quality AS (
 )
 SELECT aq.location_name, 
 aq.`month`,
-aq.air_quality_category,
+aq.air_quality_badness_category as air_quality_badness_category,
 SUM(aq.ct_air_quality_category) AS ct_air_quality_category
 FROM tb_air_quality aq
-GROUP BY aq.air_quality_category, aq.location_name, aq.`month`
+GROUP BY aq.air_quality_badness_category, aq.location_name, aq.`month`
 ORDER BY 
 CASE
 	WHEN `month` LIKE 'Jan%' THEN 0
@@ -389,10 +412,57 @@ CASE
 	ELSE 11
 END,
 CASE
-	WHEN aq.air_quality_category = 'very high' THEN 0
-	WHEN aq.air_quality_category = 'high' THEN 1 
-	WHEN aq.air_quality_category = 'medium' THEN 2 
-	WHEN aq.air_quality_category = 'low' THEN 3
+	WHEN aq.air_quality_badness_category = 'very high' THEN 0
+	WHEN aq.air_quality_badness_category = 'high' THEN 1 
+	WHEN aq.air_quality_badness_category = 'medium' THEN 2 
+	WHEN aq.air_quality_badness_category = 'low' THEN 3
+END;
+
+/*
+ * Zähle die Tage in Australien je nach Luftqualitätsindex
+ * und gruppiere sie nach Monaten zur Einschätzung der Luftqualität in Australien 2025
+ * pro Monat
+ * 
+ * Erwartetes Ergebnis:
+ * Erhöhte Werte in den Monaten Januar, März, April und Dezember wegen schwerer Waldbrände
+ * in Victoria, Westaustralien und New South Wales
+ */
+WITH tb_air_quality AS (
+	SELECT gwr.location_name,
+	get_month(DATE_FORMAT(gwr.last_updated, '%Y-%m-%d')) AS `month`,
+	get_gb_defra_category(gwr.`air_quality_gb-defra-index`) AS air_quality_badness_category,
+	COUNT(get_gb_defra_category(gwr.`air_quality_gb-defra-index`)) AS ct_air_quality_category
+	FROM GlobalWeatherRepository gwr 
+	WHERE EXTRACT(YEAR FROM gwr.last_updated) = 2025
+	AND gwr.country LIKE '%australia%'
+	GROUP BY `month`, gwr.`air_quality_gb-defra-index`, gwr.location_name
+)
+SELECT aq.location_name, 
+aq.`month`,
+aq.air_quality_badness_category as air_quality_badness_category,
+SUM(aq.ct_air_quality_category) AS ct_air_quality_category
+FROM tb_air_quality aq
+GROUP BY aq.air_quality_badness_category, aq.location_name, aq.`month`
+ORDER BY 
+CASE
+	WHEN `month` LIKE 'Jan%' THEN 0
+	WHEN `month` LIKE 'Feb%' THEN 1
+	WHEN `month` LIKE 'Mar%' THEN 2
+	WHEN `month` LIKE 'Apr%' THEN 3
+	WHEN `month` LIKE 'May'  THEN 4
+	WHEN `month` LIKE 'Jun%' THEN 5
+	WHEN `month` LIKE 'Jul%' THEN 6
+	WHEN `month` LIKE 'Aug%' THEN 7
+	WHEN `month` LIKE 'Sep%' THEN 8
+	WHEN `month` LIKE 'Oct%' THEN 9
+	WHEN `month` LIKE 'Nov%' THEN 10
+	ELSE 11
+END,
+CASE
+	WHEN aq.air_quality_badness_category = 'very high' THEN 0
+	WHEN aq.air_quality_badness_category = 'high' THEN 1 
+	WHEN aq.air_quality_badness_category = 'medium' THEN 2 
+	WHEN aq.air_quality_badness_category = 'low' THEN 3
 END;
 
 /*
