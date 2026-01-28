@@ -222,8 +222,21 @@ CASE
 END, gwr.country, gwr.timezone;
 
 CREATE OR REPLACE VIEW pbi_european_timezone_2025 AS
-SELECT * FROM v_grouped_timezones 
-WHERE timezone LIKE '%europe%';
+SELECT vgt.country,
+vgt.timezone,
+vgt.avg_temperature_celsius,
+vgt.avg_wind_kph,
+vgt.avg_gusts_kph,
+vgt.avg_pressure_millibars,
+vgt.avg_percentage_humidity,
+vgt.avg_visibility_km,
+vgt.avg_percentage_cloud_cover,
+vgt.avg_feels_like_celsius, 
+vgt.avg_uv_index,
+gwr.latitude, gwr.longitude
+FROM v_grouped_timezones vgt
+JOIN GlobalWeatherRepository gwr ON gwr.country = vgt.country
+WHERE vgt.timezone LIKE '%europe%';
 
 
 /* ---------------------------------------------------
