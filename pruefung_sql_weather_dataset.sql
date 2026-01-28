@@ -171,10 +171,13 @@ HAVING COUNT(gwr.country) = 365
 ORDER BY gwr.country; 
 
 CREATE OR REPLACE VIEW pbi_countries_with_full_2025 AS
-SELECT country, `timezone` FROM v_countries_with_full_2025;
+SELECT cwf.country, cwf.`timezone`,
+gwr.latitude, gwr.longitude 
+FROM v_countries_with_full_2025 cwf
+JOIN GlobalWeatherRepository gwr ON gwr.country = cwf.country;
 
 /*
- * Zähle alle Länder innerhalb der europäischen Zeitzone, die vollständige Daten
+ * Zeige alle Länder innerhalb der europäischen Zeitzone, die vollständige Daten
  * für das Jahr 2025 enthalten
  */
 SELECT DISTINCT gwr.country, gwr.timezone, COUNT(gwr.country) AS ct_days
