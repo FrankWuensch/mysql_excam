@@ -207,7 +207,7 @@ ROUND(AVG(gwr.pressure_mb), 1) AS avg_pressure_millibars,
 ROUND(AVG(gwr.humidity), 2) AS avg_percentage_humidity,
 ROUND(AVG(gwr.visibility_km)) AS avg_visibility_km,
 ROUND(AVG(gwr.cloud), 2) AS avg_percentage_cloud_cover,
-ROUND(AVG(gwr.feels_like_celsius), 2) AS avg_feels_like_celsios,
+ROUND(AVG(gwr.feels_like_celsius), 2) AS avg_feels_like_celsius,
 ROUND(AVG(gwr.uv_index), 1) AS avg_uv_index
 FROM GlobalWeatherRepository gwr
 WHERE EXTRACT(YEAR FROM gwr.last_updated) = 2025
@@ -217,6 +217,10 @@ CASE
 	WHEN gwr.timezone LIKE '%europe%' THEN 0
 	ELSE 1
 END, gwr.country, gwr.timezone;
+
+CREATE OR REPLACE VIEW pbi_european_timezone_2025 AS
+SELECT * FROM v_grouped_timezones 
+WHERE timezone LIKE '%europe%';
 
 
 /* ---------------------------------------------------
