@@ -174,7 +174,7 @@ CREATE OR REPLACE VIEW pbi_countries_with_full_2025 AS
 WITH
 tb_countries_2025 AS (
 	SELECT DISTINCT gwr.country, 
-	gwr.location_name
+	gwr.location_name,
 	gwr.timezone,
 	gwr.latitude, 
 	gwr.longitude,
@@ -191,6 +191,8 @@ tb_countries_2025 AS (
 	gwr.air_quality_ozone,
 	gwr.air_quality_nitrogen_dioxide,
 	gwr.air_quality_sulphur_dioxide,
+	gwr.`air_quality_us-epa-index`,
+	gwr.`air_quality_gb-defra-index`,
 	gwr.cloud,
 	gwr.last_updated,
 	get_season(DATE_FORMAT(gwr.last_updated, '%Y-%m-%d')) AS season,
@@ -199,16 +201,20 @@ tb_countries_2025 AS (
 	WHERE EXTRACT(YEAR FROM gwr.last_updated) = 2025
 	ORDER BY gwr.country, gwr.last_updated
 )
-SELECT DISTINCT *
+SELECT *
 FROM tb_countries_2025
 WHERE country IN (
     SELECT country
     FROM tb_countries_2025
-    GROUP BY country
+    GROUP BY country, timezone
     HAVING COUNT(*) = 365
 );
 
-SELECT DISTINCT COUNT(country) FROM pbi_countries_with_full_2025;
+SELECT DISTINCT country, timezone FROM pbi_countries_with_full_2025;
+
+CREATE OR REPLACE VIEW pbi_european_timezone_2025 AS
+SELECT * FROM pbi_countries_with_full_2025
+WHERE 
 
 /*
  * Zeige alle Länder innerhalb der europäischen Zeitzone, die vollständige Daten
