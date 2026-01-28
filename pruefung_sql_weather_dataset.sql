@@ -171,30 +171,44 @@ HAVING COUNT(gwr.country) = 365
 ORDER BY gwr.country; 
 
 CREATE OR REPLACE VIEW pbi_countries_with_full_2025 AS
-SELECT DISTINCT gwr.country, 
-gwr.`timezone`,
-gwr.latitude, 
-gwr.longitude,
-gwr.temperature_celsius,
-gwr.feels_like_celsius,
-gwr.wind_kph,
-gwr.gust_kph,
-gwr.wind_direction,
-gwr.pressure_mb,
-gwr.precip_mm,
-gwr.humidity,
-gwr.visibility_km,
-gwr.air_quality_carbon_monoxide,
-gwr.air_quality_ozone,
-gwr.air_quality_nitrogen_dioxide,
-gwr.air_quality_sulphur_dioxide,
-gwr.cloud,
-gwr.last_updated,
-get_season(DATE_FORMAT(gwr.last_updated, '%Y-%m-%d')) AS season,
-get_month(DATE_FORMAT(gwr.last_updated, '%Y-%m-%d')) AS `month`
-FROM GlobalWeatherRepository gwr
-WHERE EXTRACT(YEAR FROM gwr.last_updated) = 2025
-ORDER BY gwr.country, gwr.last_updated;
+WITH
+tb_countries_2025 AS (
+	SELECT DISTINCT gwr.country, 
+	gwr.location_name
+	gwr.timezone,
+	gwr.latitude, 
+	gwr.longitude,
+	gwr.temperature_celsius,
+	gwr.feels_like_celsius,
+	gwr.wind_kph,
+	gwr.gust_kph,
+	gwr.wind_direction,
+	gwr.pressure_mb,
+	gwr.precip_mm,
+	gwr.humidity,
+	gwr.visibility_km,
+	gwr.air_quality_carbon_monoxide,
+	gwr.air_quality_ozone,
+	gwr.air_quality_nitrogen_dioxide,
+	gwr.air_quality_sulphur_dioxide,
+	gwr.cloud,
+	gwr.last_updated,
+	get_season(DATE_FORMAT(gwr.last_updated, '%Y-%m-%d')) AS season,
+	get_month(DATE_FORMAT(gwr.last_updated, '%Y-%m-%d')) AS `month`
+	FROM GlobalWeatherRepository gwr
+	WHERE EXTRACT(YEAR FROM gwr.last_updated) = 2025
+	ORDER BY gwr.country, gwr.last_updated
+)
+SELECT DISTINCT *
+FROM tb_countries_2025
+WHERE country IN (
+    SELECT country
+    FROM tb_countries_2025
+    GROUP BY country
+    HAVING COUNT(*) = 365
+);
+
+SELECT DISTINCT COUNT(country) FROM pbi_countries_with_full_2025;
 
 /*
  * Zeige alle Länder innerhalb der europäischen Zeitzone, die vollständige Daten
