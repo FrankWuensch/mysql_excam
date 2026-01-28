@@ -171,10 +171,30 @@ HAVING COUNT(gwr.country) = 365
 ORDER BY gwr.country; 
 
 CREATE OR REPLACE VIEW pbi_countries_with_full_2025 AS
-SELECT cwf.country, cwf.`timezone`,
-gwr.latitude, gwr.longitude 
-FROM v_countries_with_full_2025 cwf
-JOIN GlobalWeatherRepository gwr ON gwr.country = cwf.country;
+SELECT DISTINCT gwr.country, 
+gwr.`timezone`,
+gwr.latitude, 
+gwr.longitude,
+gwr.temperature_celsius,
+gwr.feels_like_celsius,
+gwr.wind_kph,
+gwr.gust_kph,
+gwr.wind_direction,
+gwr.pressure_mb,
+gwr.precip_mm,
+gwr.humidity,
+gwr.visibility_km,
+gwr.air_quality_carbon_monoxide,
+gwr.air_quality_ozone,
+gwr.air_quality_nitrogen_dioxide,
+gwr.air_quality_sulphur_dioxide,
+gwr.cloud,
+gwr.last_updated,
+get_season(DATE_FORMAT(gwr.last_updated, '%Y-%m-%d')) AS season,
+get_month(DATE_FORMAT(gwr.last_updated, '%Y-%m-%d')) AS `month`
+FROM GlobalWeatherRepository gwr
+WHERE EXTRACT(YEAR FROM gwr.last_updated) = 2025
+ORDER BY gwr.country, gwr.last_updated;
 
 /*
  * Zeige alle Länder innerhalb der europäischen Zeitzone, die vollständige Daten
@@ -270,6 +290,10 @@ CREATE OR REPLACE VIEW v_weather_germany_2025 AS (
 	WHERE EXTRACT(YEAR FROM gwr.last_updated) = 2025
 	AND gwr.location_name LIKE '%berlin%'
 	ORDER BY gwr.last_updated
+);
+
+CREATE OR REPLACE VIEW pbi_weather_germany_2025 AS (
+	SELECT * FROM v_weather_germany_2025
 );
 
 /* 
