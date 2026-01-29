@@ -469,6 +469,7 @@ END;
  * und gruppiere sie nach Monaten zur Einschätzung der Luftqualität in Berlin 2025
  * pro Monat
  */
+CREATE OR REPLACE VIEW pbi_air_quality_germany AS
 WITH tb_air_quality AS (
 	SELECT gwr.location_name, 
 	get_month(DATE_FORMAT(gwr.last_updated, '%Y-%m-%d')) AS `month`,
@@ -506,6 +507,8 @@ CASE
 	WHEN aq.air_quality_badness_category = 'medium' THEN 2 
 	WHEN aq.air_quality_badness_category = 'low' THEN 3
 END;
+
+SELECT * FROM pbi_air_quality_germany;
 
 /*
  * Zähle die Tage in Australien je nach Luftqualitätsindex

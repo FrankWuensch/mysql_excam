@@ -1,0 +1,26 @@
+"location_name","month","air_quality_badness_category","ct_air_quality_category"
+Berlin,January,high,4
+Berlin,January,medium,7
+Berlin,January,low,20
+Berlin,February,high,9
+Berlin,February,medium,14
+Berlin,February,low,5
+Berlin,March,very high,6
+Berlin,March,high,5
+Berlin,March,medium,8
+Berlin,March,low,12
+Berlin,April,medium,9
+Berlin,April,low,21
+Berlin,May,medium,1
+Berlin,May,low,30
+Berlin,June,low,30
+Berlin,July,low,31
+Berlin,August,medium,5
+Berlin,August,low,26
+Berlin,September,medium,2
+Berlin,September,low,28
+Berlin,October,low,31
+Berlin,November,medium,2
+Berlin,November,low,28
+Berlin,December,medium,6
+Berlin,December,low,25
