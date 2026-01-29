@@ -2,6 +2,8 @@ CREATE DATABASE IF NOT EXISTS weather;
 
 USE weather;
 
+SET lc_time_names = 'de_DE';  -- Rückgabe der deutschen Namen für Monate
+
 /* 
  * Zu Beginn alle existierenden Funktionen löschen hat den Vorteil,
  * dass wenn man die Funktion ändert, die Funktionen nach dem Löschen 
@@ -37,17 +39,17 @@ DELIMITER //
  * Funktion zur Kategorisierung eines Korrelationswertes
  */
 CREATE FUNCTION get_correlation_category(value DECIMAL(4, 2))
-RETURNS VARCHAR(20)
+RETURNS VARCHAR(30)
 DETERMINISTIC
 BEGIN 
     IF ABS(value) >= 0.5 THEN  -- ABS verwendet den Betrag der Zahl, also ohne Beachtung des Vorzeichens
-        RETURN 'strong correlation';
+        RETURN 'Starke Korrelation';
     ELSEIF ABS(value) >= 0.3 THEN
-        RETURN 'medium correlation';
+        RETURN 'Mittlere Korrelation';
     ELSEIF ABS(value) >= 0.1 THEN
-        RETURN 'small correlation';
+        RETURN 'Geringe Korrelation';
     ELSE
-        RETURN 'no correlation';
+        RETURN 'Keine Korrelation';
     END IF;
 END //
 
@@ -59,17 +61,17 @@ RETURNS VARCHAR(30)
 DETERMINISTIC
 BEGIN
 	IF value >= 11 THEN
-		RETURN 'extreme risk';
+		RETURN 'Extremes Risiko';
 	ELSEIF value BETWEEN 8 AND 10 THEN 
-		RETURN 'very high risk';
+		RETURN 'Sehr hohes Risiko';
 	ELSEIF value BETWEEN 6 AND 7 THEN 
-		RETURN 'high risk';
+		RETURN 'Hohes Risiko';
 	ELSEIF value BETWEEN 3 AND 5 THEN 
-		RETURN 'medium risk';
+		RETURN 'Mittleres Risiko';
 	ELSEIF value BETWEEN 1 AND 2 THEN 
-		RETURN 'low risk';
+		RETURN 'Geringes Risiko';
 	ELSE 
-		RETURN 'no risk';
+		RETURN 'Kein Risiko';
 	END IF; 
 END //
 
@@ -84,13 +86,13 @@ RETURNS VARCHAR(30)
 DETERMINISTIC
 BEGIN
 	IF value BETWEEN DATE('2024-12-21') AND DATE('2025-03-19') THEN 
-		RETURN 'winter';
+		RETURN 'Winter';
 	ELSEIF value BETWEEN DATE('2025-03-20') AND DATE('2025-06-20') THEN
-		RETURN 'spring';
+		RETURN 'Frühling';
 	ELSEIF value BETWEEN DATE('2025-06-21') AND DATE('2025-09-21') THEN
-		RETURN 'summer';
+		RETURN 'Sommer';
 	ELSEIF value BETWEEN DATE('2025-09-22') AND DATE('2025-12-20') THEN
-		RETURN 'autumn';
+		RETURN 'Herbst';
 	ELSE
 		RETURN NULL;
 	END IF;
@@ -114,13 +116,13 @@ RETURNS VARCHAR(30)
 DETERMINISTIC
 BEGIN 
 	IF value BETWEEN 7.5 AND 10.0 THEN 
-		RETURN 'very high';
+		RETURN 'sehr schlecht';
 	ELSEIF value BETWEEN 5.0 AND 7.4 THEN 
-		RETURN 'high';
+		RETURN 'schlecht';
 	ELSEIF value BETWEEN 2.5 AND 4.9 THEN 
-		RETURN 'medium';
+		RETURN 'mittel';
 	ELSEIF value BETWEEN 0.0 AND 2.4 THEN
-		RETURN 'low';
+		RETURN 'gut';
 	END IF;
 END //
 
@@ -129,23 +131,23 @@ DELIMITER ;
 /*
  * Funktionstests
  */
-SELECT get_correlation_category(0.5)  AS correlation_category;  -- Erwartet: 'strong correlation'
-SELECT get_correlation_category(0.3)  AS correlation_category;  -- Erwartet: 'medium correlation'
-SELECT get_correlation_category(0.1)  AS correlation_category;  -- Erwartet: 'small correlation'
-SELECT get_correlation_category(-0.1) AS correlation_category;  -- Erwartet: 'small correlation'
-SELECT get_correlation_category(-0.3) AS correlation_category;  -- Erwartet: 'medium correlation'
-SELECT get_correlation_category(-0.5) AS correlation_category;  -- Erwartet: 'strong correlation'
+SELECT get_correlation_category(0.5)  AS correlation_category;  -- Erwartet: 'Starke Korrelation'
+SELECT get_correlation_category(0.3)  AS correlation_category;  -- Erwartet: 'Mittlere Korrelation'
+SELECT get_correlation_category(0.1)  AS correlation_category;  -- Erwartet: 'Geringe Korrelation'
+SELECT get_correlation_category(-0.1) AS correlation_category;  -- Erwartet: 'Geringe Korrelation'
+SELECT get_correlation_category(-0.3) AS correlation_category;  -- Erwartet: 'Mittlere Korrelation'
+SELECT get_correlation_category(-0.5) AS correlation_category;  -- Erwartet: 'Starke Korrelation'
 
-SELECT get_uv_risk(7) AS uv_risk_level;       -- Erwartet: 'high risk'
+SELECT get_uv_risk(7) AS uv_risk_level;       -- Erwartet: 'Hohes Risiko'
 
-SELECT get_season('2024-12-21') AS season;    -- Erwartet: 'winter'
+SELECT get_season('2024-12-21') AS season;    -- Erwartet: 'Winter'
 SELECT get_season('2024-12-20') AS season;    -- Erwartet: NULL
 
-SELECT get_month('2025-01-04') AS `month`;    -- Erwartet: 'January'
-SELECT get_month('2025-03-20') AS `month`;    -- Erwartet: 'March'
-SELECT get_month('2024-12-21') AS `month`;    -- Erwartet: 'December'
+SELECT get_month('2025-01-04') AS `month`;    -- Erwartet: 'Januar'
+SELECT get_month('2025-03-20') AS `month`;    -- Erwartet: 'März'
+SELECT get_month('2024-12-21') AS `month`;    -- Erwartet: 'Dezember'
 
-SELECT get_gb_defra_category(5) AS category;  -- Erwartet: 'high'
+SELECT get_gb_defra_category(5) AS category;  -- Erwartet: 'schlecht'
 
 /*
  * Mit den folgenden Abfragen verschaffe ich mir einen grundsätzlichen Überblick über 
@@ -196,7 +198,8 @@ tb_countries_2025 AS (
 	gwr.cloud,
 	gwr.last_updated,
 	get_season(DATE_FORMAT(gwr.last_updated, '%Y-%m-%d')) AS season,
-	get_month(DATE_FORMAT(gwr.last_updated, '%Y-%m-%d')) AS `month`
+	get_month(DATE_FORMAT(gwr.last_updated, '%Y-%m-%d')) AS `month`,
+	EXTRACT(MONTH FROM gwr.last_updated) AS month_number
 	FROM GlobalWeatherRepository gwr
 	WHERE EXTRACT(YEAR FROM gwr.last_updated) = 2025
 	ORDER BY gwr.country, gwr.last_updated
@@ -211,10 +214,6 @@ WHERE country IN (
 );
 
 SELECT DISTINCT country, timezone FROM pbi_countries_with_full_2025;
-
-CREATE OR REPLACE VIEW pbi_european_timezone_2025 AS
-SELECT * FROM pbi_countries_with_full_2025
-WHERE 
 
 /*
  * Zeige alle Länder innerhalb der europäischen Zeitzone, die vollständige Daten
@@ -305,7 +304,8 @@ CREATE OR REPLACE VIEW v_weather_germany_2025 AS (
 	gwr.air_quality_nitrogen_dioxide,
 	gwr.air_quality_sulphur_dioxide,
 	gwr.cloud,
-	get_month(DATE_FORMAT(gwr.last_updated, '%Y-%m-%d')) AS `month`
+	get_month(DATE_FORMAT(gwr.last_updated, '%Y-%m-%d')) AS `month`,
+	EXTRACT(MONTH FROM gwr.last_updated) AS month_number
 	FROM GlobalWeatherRepository gwr
 	WHERE EXTRACT(YEAR FROM gwr.last_updated) = 2025
 	AND gwr.location_name LIKE '%berlin%'
@@ -338,7 +338,9 @@ CREATE OR REPLACE VIEW v_weather_germany_seasons AS (
 	gwr.air_quality_sulphur_dioxide,
 	gwr.cloud,
 	gwr.last_updated,
-	get_season(DATE_FORMAT(gwr.last_updated, '%Y-%m-%d')) AS season
+	get_season(DATE_FORMAT(gwr.last_updated, '%Y-%m-%d')) AS season,
+	get_month(DATE_FORMAT(gwr.last_updated, '%Y-%m-%d')) AS `month`,
+	EXTRACT(MONTH FROM gwr.last_updated) AS month_number
 	FROM GlobalWeatherRepository gwr
 	WHERE DATE_FORMAT(gwr.last_updated, '%Y-%m-%d') BETWEEN DATE('2024-12-21') AND DATE('2025-12-20')
 	AND gwr.location_name LIKE '%berlin%'
@@ -362,7 +364,9 @@ wgs.air_quality_ozone,
 wgs.air_quality_nitrogen_dioxide,
 wgs.air_quality_sulphur_dioxide,
 wgs.cloud,
-get_season(DATE_FORMAT(wgs.last_updated, '%Y-%m-%d')) AS season
+get_season(DATE_FORMAT(wgs.last_updated, '%Y-%m-%d')) AS season,
+get_month(DATE_FORMAT(wgs.last_updated, '%Y-%m-%d')) AS `month`,
+EXTRACT(MONTH FROM wgs.last_updated) AS month_number
 FROM v_weather_germany_seasons wgs;
 
 /*
@@ -418,9 +422,9 @@ FROM v_weather_germany_seasons vws
 GROUP BY vws.season WITH ROLLUP
 ORDER BY 
 CASE
-	WHEN vws.season LIKE 'win%' THEN 0
-	WHEN vws.season LIKE 'spr%' THEN 1
-	WHEN vws.season LIKE 'sum%' THEN 2
+	WHEN vws.season LIKE 'Win%' THEN 0
+	WHEN vws.season LIKE 'Frü%' THEN 1
+	WHEN vws.season LIKE 'Som%' THEN 2
 	ELSE 3
 END;
 
@@ -452,14 +456,14 @@ ORDER BY
 CASE
 	WHEN vwg.`month` LIKE 'Jan%' THEN 0
 	WHEN vwg.`month` LIKE 'Feb%' THEN 1
-	WHEN vwg.`month` LIKE 'Mar%' THEN 2
+	WHEN vwg.`month` LIKE 'Mär%' THEN 2
 	WHEN vwg.`month` LIKE 'Apr%' THEN 3
-	WHEN vwg.`month` LIKE 'May'  THEN 4
+	WHEN vwg.`month` LIKE 'Mai'  THEN 4
 	WHEN vwg.`month` LIKE 'Jun%' THEN 5
 	WHEN vwg.`month` LIKE 'Jul%' THEN 6
 	WHEN vwg.`month` LIKE 'Aug%' THEN 7
 	WHEN vwg.`month` LIKE 'Sep%' THEN 8
-	WHEN vwg.`month` LIKE 'Oct%' THEN 9
+	WHEN vwg.`month` LIKE 'Okt%' THEN 9
 	WHEN vwg.`month` LIKE 'Nov%' THEN 10
 	ELSE 11
 END;
@@ -488,24 +492,24 @@ FROM tb_air_quality aq
 GROUP BY aq.air_quality_badness_category, aq.location_name, aq.`month`
 ORDER BY 
 CASE
-	WHEN `month` LIKE 'Jan%' THEN 0
-	WHEN `month` LIKE 'Feb%' THEN 1
-	WHEN `month` LIKE 'Mar%' THEN 2
-	WHEN `month` LIKE 'Apr%' THEN 3
-	WHEN `month` LIKE 'May'  THEN 4
-	WHEN `month` LIKE 'Jun%' THEN 5
-	WHEN `month` LIKE 'Jul%' THEN 6
-	WHEN `month` LIKE 'Aug%' THEN 7
-	WHEN `month` LIKE 'Sep%' THEN 8
-	WHEN `month` LIKE 'Oct%' THEN 9
-	WHEN `month` LIKE 'Nov%' THEN 10
+	WHEN aq.`month` LIKE 'Jan%' THEN 0
+	WHEN aq.`month` LIKE 'Feb%' THEN 1
+	WHEN aq.`month` LIKE 'Mär%' THEN 2
+	WHEN aq.`month` LIKE 'Apr%' THEN 3
+	WHEN aq.`month` LIKE 'Mai'  THEN 4
+	WHEN aq.`month` LIKE 'Jun%' THEN 5
+	WHEN aq.`month` LIKE 'Jul%' THEN 6
+	WHEN aq.`month` LIKE 'Aug%' THEN 7
+	WHEN aq.`month` LIKE 'Sep%' THEN 8
+	WHEN aq.`month` LIKE 'Okt%' THEN 9
+	WHEN aq.`month` LIKE 'Nov%' THEN 10
 	ELSE 11
 END,
 CASE
-	WHEN aq.air_quality_badness_category = 'very high' THEN 0
-	WHEN aq.air_quality_badness_category = 'high' THEN 1 
-	WHEN aq.air_quality_badness_category = 'medium' THEN 2 
-	WHEN aq.air_quality_badness_category = 'low' THEN 3
+	WHEN aq.air_quality_badness_category = 'sehr schlecht' THEN 0
+	WHEN aq.air_quality_badness_category = 'schlecht' THEN 1 
+	WHEN aq.air_quality_badness_category = 'mittel' THEN 2 
+	WHEN aq.air_quality_badness_category = 'gut' THEN 3
 END;
 
 SELECT * FROM pbi_air_quality_germany;
@@ -541,24 +545,24 @@ FROM tb_air_quality aq
 GROUP BY aq.air_quality_badness_category, aq.location_name, aq.`month`
 ORDER BY 
 CASE
-	WHEN `month` LIKE 'Jan%' THEN 0
-	WHEN `month` LIKE 'Feb%' THEN 1
-	WHEN `month` LIKE 'Mar%' THEN 2
-	WHEN `month` LIKE 'Apr%' THEN 3
-	WHEN `month` LIKE 'May'  THEN 4
-	WHEN `month` LIKE 'Jun%' THEN 5
-	WHEN `month` LIKE 'Jul%' THEN 6
-	WHEN `month` LIKE 'Aug%' THEN 7
-	WHEN `month` LIKE 'Sep%' THEN 8
-	WHEN `month` LIKE 'Oct%' THEN 9
-	WHEN `month` LIKE 'Nov%' THEN 10
+	WHEN aq.`month` LIKE 'Jan%' THEN 0
+	WHEN aq.`month` LIKE 'Feb%' THEN 1
+	WHEN aq.`month` LIKE 'Mär%' THEN 2
+	WHEN aq.`month` LIKE 'Apr%' THEN 3
+	WHEN aq.`month` LIKE 'Mai'  THEN 4
+	WHEN aq.`month` LIKE 'Jun%' THEN 5
+	WHEN aq.`month` LIKE 'Jul%' THEN 6
+	WHEN aq.`month` LIKE 'Aug%' THEN 7
+	WHEN aq.`month` LIKE 'Sep%' THEN 8
+	WHEN aq.`month` LIKE 'Okt%' THEN 9
+	WHEN aq.`month` LIKE 'Nov%' THEN 10
 	ELSE 11
 END,
 CASE
-	WHEN aq.air_quality_badness_category = 'very high' THEN 0
-	WHEN aq.air_quality_badness_category = 'high' THEN 1 
-	WHEN aq.air_quality_badness_category = 'medium' THEN 2 
-	WHEN aq.air_quality_badness_category = 'low' THEN 3
+	WHEN aq.air_quality_badness_category = 'sehr schlecht' THEN 0
+	WHEN aq.air_quality_badness_category = 'schlecht' THEN 1 
+	WHEN aq.air_quality_badness_category = 'mittel' THEN 2 
+	WHEN aq.air_quality_badness_category = 'gut' THEN 3
 END;
 
 /*
