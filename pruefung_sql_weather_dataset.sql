@@ -204,6 +204,7 @@ tb_countries_2025 AS (
 	EXTRACT(MONTH FROM gwr.last_updated) AS month_number
 	FROM GlobalWeatherRepository gwr
 	WHERE EXTRACT(YEAR FROM gwr.last_updated) = 2025
+	OR gwr.location_name = 'Chi-Chi-Erh'  -- Ausreißer
 	ORDER BY gwr.country, gwr.last_updated
 )
 SELECT *
@@ -221,17 +222,17 @@ SELECT DISTINCT country, timezone FROM pbi_countries_with_full_2025;
  * Zeige alle Länder innerhalb der europäischen Zeitzone, die vollständige Daten
  * für das Jahr 2025 enthalten
  */
-SELECT DISTINCT gwr.country, gwr.timezone, COUNT(gwr.country) AS ct_days
-FROM GlobalWeatherRepository gwr 
-WHERE EXTRACT(YEAR FROM gwr.last_updated) = 2025
-AND gwr.timezone LIKE '%europe%'
-GROUP BY gwr.country, gwr.timezone
-HAVING COUNT(gwr.country) = 365
-ORDER BY gwr.country; 
+SELECT DISTINCT cwf.country, cwf.timezone, COUNT(cwf.country) AS ct_days
+FROM pbi_countries_with_full_2025 cwf
+WHERE EXTRACT(YEAR FROM cwf.last_updated) = 2025
+AND cwf.timezone LIKE '%europe%'
+GROUP BY cwf.country, cwf.timezone
+HAVING COUNT(cwf.country) = 365
+ORDER BY cwf.country; 
 
-SELECT COUNT(*) AS ct_days FROM GlobalWeatherRepository gwr 
-WHERE EXTRACT(YEAR FROM gwr.last_updated) = 2025
-AND gwr.location_name LIKE '%berlin%';
+SELECT COUNT(*) AS ct_days FROM pbi_countries_with_full_2025 cwf
+WHERE EXTRACT(YEAR FROM cwf.last_updated) = 2025
+AND cwf.location_name LIKE '%berlin%';
 
 /*
  * Durchschnittliche Wetterbedingungen hinsichtlich Zeitzonen und Länder 2025
@@ -241,30 +242,11 @@ AND gwr.location_name LIKE '%berlin%';
  * Die Abfrage wird als VIEW v_grouped_timezones abgespeichert, um die Daten nicht
  * bei jeder Abfrage neu filtern zu müssen.
  */
-CREATE OR REPLACE VIEW v_grouped_timezones AS 
-SELECT cwf.country, 
-cwf.timezone, 
-ROUND(AVG(cwf.temperature_celsius), 2) AS avg_temperature_celsius,
-ROUND(AVG(cwf.wind_kph)) AS avg_wind_kph,
-ROUND(AVG(cwf.gust_kph)) AS avg_gusts_kph,
-ROUND(AVG(cwf.pressure_mb), 1) AS avg_pressure_millibars,
-ROUND(AVG(cwf.humidity), 2) AS avg_percentage_humidity,
-ROUND(AVG(cwf.visibility_km)) AS avg_visibility_km,
-ROUND(AVG(cwf.cloud), 2) AS avg_percentage_cloud_cover,
-ROUND(AVG(cwf.feels_like_celsius), 2) AS avg_feels_like_celsius,
-ROUND(AVG(cwf.uv_index), 1) AS avg_uv_index
-FROM pbi_countries_with_full_2025 cwf
-WHERE EXTRACT(YEAR FROM cwf.last_updated) = 2025
-GROUP BY cwf.country, cwf.timezone
-ORDER BY 
-CASE 
-	WHEN cwf.timezone LIKE '%europe%' THEN 0
-	ELSE 1
-END, cwf.country, cwf.timezone;
-
 CREATE OR REPLACE VIEW pbi_european_timezone_2025 AS
-SELECT * FROM v_grouped_timezones gt
-WHERE gt.timezone LIKE '%europe%';
+SELECT * FROM pbi_countries_with_full_2025 cwf
+WHERE cwf.timezone LIKE '%europe%';
+
+SELECT * FROM pbi_european_timezone_2025;
 
 
 /* ---------------------------------------------------
@@ -532,13 +514,13 @@ SELECT * FROM pbi_air_quality_germany;
  * Finde die 10 heißesten Orte in der europäischen Zeitzone im Jahr 2025
  */
 CREATE OR REPLACE VIEW pbi_10_highest_temperatures_europe_2025 AS
-SELECT vgt.country, 
-ROUND(AVG(vgt.avg_temperature_celsius), 2) AS avg_temperature_celsius,
-DENSE_RANK() OVER(ORDER BY AVG(vgt.avg_temperature_celsius) DESC) AS `ranking`
-FROM v_grouped_timezones vgt
-WHERE vgt.timezone LIKE '%europe%'
-GROUP BY vgt.country
-ORDER BY `ranking`, vgt.country
+SELECT cwf.country, 
+ROUND(AVG(cwf.temperature_celsius), 2) AS avg_temperature_celsius,
+DENSE_RANK() OVER(ORDER BY AVG(cwf.temperature_celsius) DESC) AS `ranking`
+FROM pbi_countries_with_full_2025 cwf
+WHERE cwf.timezone LIKE '%europe%'
+GROUP BY cwf.country, cwf.timezone
+ORDER BY `ranking`, cwf.country
 LIMIT 10;
 
 SELECT * FROM pbi_10_highest_temperatures_europe_2025;
@@ -547,13 +529,13 @@ SELECT * FROM pbi_10_highest_temperatures_europe_2025;
  * Finde die 10 kältesten Orte in der europäischen Zeitzone im Jahr 2025
  */
 CREATE OR REPLACE VIEW pbi_10_lowest_temperatures_europe_2025 AS
-SELECT vgt.country, 
-ROUND(AVG(vgt.avg_temperature_celsius), 2) AS avg_temperature_celsius,
-DENSE_RANK() OVER(ORDER BY AVG(vgt.avg_temperature_celsius)) AS `ranking`
-FROM v_grouped_timezones vgt 
-WHERE vgt.timezone LIKE '%europe%'
-GROUP BY vgt.country
-ORDER BY `ranking`, vgt.country
+SELECT cwf.country, 
+ROUND(AVG(cwf.temperature_celsius), 2) AS avg_temperature_celsius,
+DENSE_RANK() OVER(ORDER BY AVG(cwf.temperature_celsius)) AS `ranking`
+FROM pbi_countries_with_full_2025 cwf
+WHERE cwf.timezone LIKE '%europe%'
+GROUP BY cwf.country, cwf.timezone
+ORDER BY `ranking`, cwf.country
 LIMIT 10;
 
 SELECT * FROM pbi_10_lowest_temperatures_europe_2025;
@@ -589,7 +571,7 @@ cwf.country
 FROM pbi_countries_with_full_2025 cwf
 WHERE EXTRACT(YEAR FROM cwf.last_updated) = 2025
 GROUP BY cwf.location_name, cwf.country
-ORDER BY avg_max_temperatur_celsius
+ORDER BY avg_min_temperatur_celsius
 LIMIT 10;
 
 SELECT * FROM pbi_10_lowest_temperatures_worldwide;
@@ -628,7 +610,7 @@ SELECT * FROM pbi_10_countries_with_most_worst_air_quality_worldwide;
 /*
  * Finde die 10 Orte mit der weltweit niedrigsten Luftverschmutzung mit CO 2025
  */
-CREATE OR REPLACE VIEW pbi_10_contries_with_best_air_quality_worldwide AS
+CREATE OR REPLACE VIEW pbi_10_countries_with_best_air_quality_worldwide AS
 SELECT ROUND(AVG(cwf.air_quality_carbon_monoxide), 2) AS avg_air_quality_carbon_monoxide,
 cwf.location_name,
 cwf.country
@@ -638,7 +620,7 @@ GROUP BY cwf.location_name, cwf.country
 ORDER BY avg_air_quality_carbon_monoxide
 LIMIT 10;
 
-SELECT * FROM pbi_10_contries_with_best_air_quality_worldwide;
+SELECT * FROM pbi_10_countries_with_best_air_quality_worldwide;
 
 /*
  * Erkennen von Zusammenhängen zwischen verschiedenen Parametern mittels Korrelationen
