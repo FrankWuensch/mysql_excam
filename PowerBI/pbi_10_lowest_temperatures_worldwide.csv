@@ -1,11 +1,11 @@
-"avg_min_temperatur_celsius","location_name","country","date"
--23.8,Astana,Kazakhstan,Januar 2025
--23.6,Astana,Kazakhstan,Januar 2025
--22.9,Chi-Chi-Erh,Russia,Dezember 2025
--22.8,Astana,Kazakhstan,Dezember 2025
--21.7,Chi-Chi-Erh,Russia,Dezember 2025
--21.6,Astana,Kazakhstan,Dezember 2025
--20.8,Astana,Kazakhstan,Dezember 2025
--19.5,Chi-Chi-Erh,Russia,Dezember 2025
--18.9,Astana,Kazakhstan,Dezember 2025
--18.8,Chi-Chi-Erh,Russia,Dezember 2025
+"avg_min_temperatur_celsius","location_name","country"
+-18.36,Chi-Chi-Erh,Russia
+8.22,Oslo,Norway
+8.78,Helsinki,Finland
+8.9,Andorra La Vella,Andorra
+8.98,Tallinn,Estonia
+9.16,Vilnius,Lithuania
+9.39,Moscow,Russia
+9.46,Minsk,Belarus
+9.55,Astana,Kazakhstan
+9.56,Stockholm,Sweden

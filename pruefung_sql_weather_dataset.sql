@@ -313,53 +313,36 @@ CREATE OR REPLACE VIEW pbi_weather_germany_2025 AS (
  * Verwendung ausschließlich für Analysen, die auf die Saison bezogen sind
  */
 CREATE OR REPLACE VIEW v_weather_germany_seasons AS (
-	SELECT cwf.location_name,
-	cwf.country,
-	cwf.temperature_celsius,
-	cwf.feels_like_celsius,
-	cwf.wind_kph,
-	cwf.gust_kph,
-	cwf.wind_direction,
-	cwf.pressure_mb,
-	cwf.precip_mm,
-	cwf.humidity,
-	cwf.visibility_km,
-	cwf.air_quality_carbon_monoxide,
-	cwf.air_quality_ozone,
-	cwf.air_quality_nitrogen_dioxide,
-	cwf.air_quality_sulphur_dioxide,
-	cwf.cloud,
-	cwf.last_updated,
-	get_season(DATE(cwf.last_updated)) AS season,
-	get_month(DATE(cwf.last_updated)) AS `month`,
-	EXTRACT(MONTH FROM cwf.last_updated) AS month_number
-	FROM pbi_countries_with_full_2025 cwf
-	WHERE DATE(cwf.last_updated) BETWEEN DATE('2024-12-21') AND DATE('2025-12-20')
-	AND cwf.location_name LIKE '%berlin%'
-	ORDER BY cwf.last_updated
+	SELECT gwr.location_name,
+	gwr.country,
+	gwr.temperature_celsius,
+	gwr.feels_like_celsius,
+	gwr.wind_kph,
+	gwr.gust_kph,
+	gwr.wind_direction,
+	gwr.pressure_mb,
+	gwr.precip_mm,
+	gwr.humidity,
+	gwr.visibility_km,
+	gwr.air_quality_carbon_monoxide,
+	gwr.air_quality_ozone,
+	gwr.air_quality_nitrogen_dioxide,
+	gwr.air_quality_sulphur_dioxide,
+	gwr.cloud,
+	gwr.last_updated,
+	get_season(DATE(gwr.last_updated)) AS season,
+	get_month(DATE(gwr.last_updated)) AS `month`,
+	EXTRACT(MONTH FROM gwr.last_updated) AS month_number
+	FROM GlobalWeatherRepository gwr
+	WHERE DATE(gwr.last_updated) BETWEEN DATE('2024-12-21') AND DATE('2025-12-20')
+	AND gwr.location_name LIKE '%berlin%'
+	ORDER BY gwr.last_updated
 );
 
 CREATE OR REPLACE VIEW pbi_weather_germany_with_seasons AS
-SELECT wgs.location_name,
-wgs.country,
-wgs.temperature_celsius,
-wgs.feels_like_celsius,
-wgs.wind_kph,
-wgs.gust_kph,
-wgs.wind_direction,
-wgs.pressure_mb,
-wgs.precip_mm,
-wgs.humidity,
-wgs.visibility_km,
-wgs.air_quality_carbon_monoxide,
-wgs.air_quality_ozone,
-wgs.air_quality_nitrogen_dioxide,
-wgs.air_quality_sulphur_dioxide,
-wgs.cloud,
-get_season(DATE(wgs.last_updated)) AS season,
-get_month(DATE(wgs.last_updated)) AS `month`,
-EXTRACT(MONTH FROM wgs.last_updated) AS month_number
-FROM v_weather_germany_seasons wgs;
+SELECT * FROM v_weather_germany_seasons;
+
+SELECT * FROM pbi_weather_germany_with_seasons;
 
 /*
  * Finde
@@ -585,13 +568,13 @@ SELECT * FROM pbi_10_lowest_temperatures_europe_2025;
  * Finde die 10 Orte mit der höchsten Durchschnittstemperatur weltweit im Jahr 2025
  */
 CREATE OR REPLACE VIEW pbi_10_highest_temperatures_worldwide AS
-SELECT cwf.temperature_celsius AS avg_min_temperatur_celsius,
+SELECT ROUND(AVG(cwf.temperature_celsius), 2) AS avg_max_temperatur_celsius,
 cwf.location_name,
-cwf.country,
-DATE_FORMAT(cwf.last_updated, '%M %Y') AS `date`
+cwf.country
 FROM pbi_countries_with_full_2025 cwf
 WHERE EXTRACT(YEAR FROM cwf.last_updated) = 2025
-ORDER BY cwf.temperature_celsius DESC
+GROUP BY cwf.location_name, cwf.country
+ORDER BY avg_max_temperatur_celsius DESC
 LIMIT 10;
 
 SELECT * FROM pbi_10_highest_temperatures_worldwide;
@@ -600,13 +583,13 @@ SELECT * FROM pbi_10_highest_temperatures_worldwide;
  * Finde die 10 Orte mit der niedrigsten Durchschnittstemperatur weltweit im Jahr 2025
  */
 CREATE OR REPLACE VIEW pbi_10_lowest_temperatures_worldwide AS
-SELECT cwf.temperature_celsius AS avg_min_temperatur_celsius,
+SELECT ROUND(AVG(cwf.temperature_celsius), 2) AS avg_min_temperatur_celsius,
 cwf.location_name,
-cwf.country,
-DATE_FORMAT(cwf.last_updated, '%M %Y') AS `date`
+cwf.country
 FROM pbi_countries_with_full_2025 cwf
 WHERE EXTRACT(YEAR FROM cwf.last_updated) = 2025
-ORDER BY cwf.temperature_celsius 
+GROUP BY cwf.location_name, cwf.country
+ORDER BY avg_max_temperatur_celsius
 LIMIT 10;
 
 SELECT * FROM pbi_10_lowest_temperatures_worldwide;
