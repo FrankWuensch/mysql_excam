@@ -2,8 +2,6 @@ CREATE DATABASE IF NOT EXISTS weather;
 
 USE weather;
 
-SET lc_time_names = 'de_DE';  -- Rückgabe der deutschen Namen für Monate
-
 /* 
  * Zu Beginn alle existierenden Funktionen löschen hat den Vorteil,
  * dass wenn man die Funktion ändert, die Funktionen nach dem Löschen 
@@ -105,6 +103,7 @@ CREATE FUNCTION get_month(value DATE)
 RETURNS VARCHAR(30)
 DETERMINISTIC 
 BEGIN
+	SET lc_time_names = 'de_DE';  -- Rückgabe der deutschen Namen für Monate
 	RETURN DATE_FORMAT(value, '%M');
 END //
 
@@ -292,7 +291,10 @@ CREATE OR REPLACE VIEW v_weather_germany_2025 AS (
 	cwf.air_quality_ozone,
 	cwf.air_quality_nitrogen_dioxide,
 	cwf.air_quality_sulphur_dioxide,
+	cwf.`air_quality_us-epa-index`,
+	cwf.`air_quality_gb-defra-index`,
 	cwf.cloud,
+	cwf.last_updated,
 	get_month(DATE(cwf.last_updated)) AS `month`,
 	EXTRACT(MONTH FROM cwf.last_updated) AS month_number
 	FROM pbi_countries_with_full_2025 cwf
@@ -310,30 +312,30 @@ CREATE OR REPLACE VIEW pbi_weather_germany_2025 AS (
  * Verwendung ausschließlich für Analysen, die auf die Saison bezogen sind
  */
 CREATE OR REPLACE VIEW v_weather_germany_seasons AS (
-	SELECT gwr.location_name,
-	gwr.country,
-	gwr.temperature_celsius,
-	gwr.feels_like_celsius,
-	gwr.wind_kph,
-	gwr.gust_kph,
-	gwr.wind_direction,
-	gwr.pressure_mb,
-	gwr.precip_mm,
-	gwr.humidity,
-	gwr.visibility_km,
-	gwr.air_quality_carbon_monoxide,
-	gwr.air_quality_ozone,
-	gwr.air_quality_nitrogen_dioxide,
-	gwr.air_quality_sulphur_dioxide,
-	gwr.cloud,
-	gwr.last_updated,
-	get_season(DATE(gwr.last_updated)) AS season,
-	get_month(DATE(gwr.last_updated)) AS `month`,
-	EXTRACT(MONTH FROM gwr.last_updated) AS month_number
-	FROM GlobalWeatherRepository gwr
-	WHERE DATE(gwr.last_updated) BETWEEN DATE('2024-12-21') AND DATE('2025-12-20')
-	AND gwr.location_name LIKE '%berlin%'
-	ORDER BY gwr.last_updated
+	SELECT cwf.location_name,
+	cwf.country,
+	cwf.temperature_celsius,
+	cwf.feels_like_celsius,
+	cwf.wind_kph,
+	cwf.gust_kph,
+	cwf.wind_direction,
+	cwf.pressure_mb,
+	cwf.precip_mm,
+	cwf.humidity,
+	cwf.visibility_km,
+	cwf.air_quality_carbon_monoxide,
+	cwf.air_quality_ozone,
+	cwf.air_quality_nitrogen_dioxide,
+	cwf.air_quality_sulphur_dioxide,
+	cwf.cloud,
+	cwf.last_updated,
+	get_season(DATE(cwf.last_updated)) AS season,
+	get_month(DATE(cwf.last_updated)) AS `month`,
+	EXTRACT(MONTH FROM cwf.last_updated) AS month_number
+	FROM pbi_countries_with_full_2025 cwf
+	WHERE DATE(cwf.last_updated) BETWEEN DATE('2024-12-21') AND DATE('2025-12-20')
+	AND cwf.location_name LIKE '%berlin%'
+	ORDER BY cwf.last_updated
 );
 
 CREATE OR REPLACE VIEW pbi_weather_germany_with_seasons AS
@@ -425,6 +427,7 @@ END;
  * 2025 IN Deutschland (Berlin)
  * bezogen auf die Monate Januar bis Dezember 2025
  */
+CREATE OR REPLACE VIEW v_day_count_weather_conditions_germany_2025 AS
 SELECT
 COALESCE(vwg.`month`, 'TOTAL') AS `month`,
 COUNT(
@@ -457,6 +460,41 @@ CASE
 	ELSE 11
 END;
 
+SELECT * FROM v_day_count_weather_conditions_germany_2025;
+
+CREATE OR REPLACE VIEW pbi_day_count_weather_conditions_germany_2025 AS
+SELECT
+vwg.`month`,
+COUNT(
+CASE 
+	WHEN cloud < 50 AND NOT precip_mm > 0 THEN 1 
+END) AS sunny_days,
+COUNT(
+CASE 
+	WHEN cloud >= 50 AND NOT precip_mm > 0 THEN 1 
+END) AS cloudy_days,
+COUNT(
+CASE 
+	WHEN precip_mm > 0 THEN 1 
+END) AS rainy_days
+FROM v_weather_germany_2025 vwg 
+GROUP BY vwg.`month`
+ORDER BY 
+CASE
+	WHEN vwg.`month` LIKE 'Jan%' THEN 0
+	WHEN vwg.`month` LIKE 'Feb%' THEN 1
+	WHEN vwg.`month` LIKE 'Mär%' THEN 2
+	WHEN vwg.`month` LIKE 'Apr%' THEN 3
+	WHEN vwg.`month` LIKE 'Mai'  THEN 4
+	WHEN vwg.`month` LIKE 'Jun%' THEN 5
+	WHEN vwg.`month` LIKE 'Jul%' THEN 6
+	WHEN vwg.`month` LIKE 'Aug%' THEN 7
+	WHEN vwg.`month` LIKE 'Sep%' THEN 8
+	WHEN vwg.`month` LIKE 'Okt%' THEN 9
+	WHEN vwg.`month` LIKE 'Nov%' THEN 10
+	ELSE 11
+END;
+
 /*
  * Zähle die Tage in Deutschland je nach Luftqualitätsindex
  * und gruppiere sie nach Monaten zur Einschätzung der Luftqualität in Berlin 2025
@@ -464,22 +502,25 @@ END;
  */
 CREATE OR REPLACE VIEW pbi_air_quality_germany AS
 WITH tb_air_quality AS (
-	SELECT gwr.location_name, 
-	get_month(DATE(gwr.last_updated)) AS `month`,
-	get_gb_defra_category(gwr.`air_quality_gb-defra-index`) AS air_quality_badness_category,
-	COUNT(get_gb_defra_category(gwr.`air_quality_gb-defra-index`)) AS ct_air_quality_category
-	FROM GlobalWeatherRepository gwr 
-	WHERE EXTRACT(YEAR FROM gwr.last_updated) = 2025
-	AND gwr.location_name LIKE '%berlin%'
-	GROUP BY `month`, gwr.`air_quality_gb-defra-index`, gwr.location_name
+	SELECT vwg.location_name, 
+	get_month(DATE(vwg.last_updated)) AS `month`,
+	get_gb_defra_category(vwg.`air_quality_gb-defra-index`) AS air_quality_badness_category,
+	COUNT(get_gb_defra_category(vwg.`air_quality_gb-defra-index`)) AS ct_air_quality_category,
+	vwg.last_updated,
+	EXTRACT(MONTH FROM vwg.last_updated) AS month_number
+	FROM v_weather_germany_2025 vwg 
+	WHERE EXTRACT(YEAR FROM vwg.last_updated) = 2025
+	AND vwg.location_name LIKE '%berlin%'
+	GROUP BY vwg.`month`, vwg.last_updated, vwg.`air_quality_gb-defra-index`, vwg.location_name
 )
-SELECT aq.location_name, 
+SELECT DISTINCT aq.location_name, 
 aq.`month`,
-aq.air_quality_badness_category as air_quality_badness_category,
-SUM(aq.ct_air_quality_category) AS ct_air_quality_category
+aq.air_quality_badness_category AS air_quality_badness_category,
+SUM(aq.ct_air_quality_category) AS ct_air_quality_category,
+aq.month_number
 FROM tb_air_quality aq
-GROUP BY aq.air_quality_badness_category, aq.location_name, aq.`month`
-ORDER BY 
+GROUP BY aq.air_quality_badness_category, aq.location_name, aq.`month`, aq.month_number
+ORDER BY
 CASE
 	WHEN aq.`month` LIKE 'Jan%' THEN 0
 	WHEN aq.`month` LIKE 'Feb%' THEN 1
@@ -502,57 +543,6 @@ CASE
 END;
 
 SELECT * FROM pbi_air_quality_germany;
-
-/*
- * Zähle die Tage in Australien je nach Luftqualitätsindex
- * und gruppiere sie nach Monaten zur Einschätzung der Luftqualität in Australien 2025
- * pro Monat
- * 
- * Erwartetes Ergebnis:
- * Erhöhte Werte in den Monaten Januar, März, April und Dezember wegen schwerer Waldbrände
- * in Victoria, Westaustralien und New South Wales
- * 
- * Fazit:
- * Leider keine Auffälligkeiten feststellbar, weil keine Daten von den jeweiligen
- * Orten vorhanden
- */
-WITH tb_air_quality AS (
-	SELECT gwr.location_name,
-	get_month(DATE(gwr.last_updated)) AS `month`,
-	get_gb_defra_category(gwr.`air_quality_gb-defra-index`) AS air_quality_badness_category,
-	COUNT(get_gb_defra_category(gwr.`air_quality_gb-defra-index`)) AS ct_air_quality_category
-	FROM GlobalWeatherRepository gwr 
-	WHERE EXTRACT(YEAR FROM gwr.last_updated) = 2025
-	AND gwr.country LIKE '%australia%'
-	GROUP BY `month`, gwr.`air_quality_gb-defra-index`, gwr.location_name
-)
-SELECT aq.location_name, 
-aq.`month`,
-aq.air_quality_badness_category as air_quality_badness_category,
-SUM(aq.ct_air_quality_category) AS ct_air_quality_category
-FROM tb_air_quality aq
-GROUP BY aq.air_quality_badness_category, aq.location_name, aq.`month`
-ORDER BY 
-CASE
-	WHEN aq.`month` LIKE 'Jan%' THEN 0
-	WHEN aq.`month` LIKE 'Feb%' THEN 1
-	WHEN aq.`month` LIKE 'Mär%' THEN 2
-	WHEN aq.`month` LIKE 'Apr%' THEN 3
-	WHEN aq.`month` LIKE 'Mai'  THEN 4
-	WHEN aq.`month` LIKE 'Jun%' THEN 5
-	WHEN aq.`month` LIKE 'Jul%' THEN 6
-	WHEN aq.`month` LIKE 'Aug%' THEN 7
-	WHEN aq.`month` LIKE 'Sep%' THEN 8
-	WHEN aq.`month` LIKE 'Okt%' THEN 9
-	WHEN aq.`month` LIKE 'Nov%' THEN 10
-	ELSE 11
-END,
-CASE
-	WHEN aq.air_quality_badness_category = 'sehr schlecht' THEN 0
-	WHEN aq.air_quality_badness_category = 'schlecht' THEN 1 
-	WHEN aq.air_quality_badness_category = 'mittel' THEN 2 
-	WHEN aq.air_quality_badness_category = 'gut' THEN 3
-END;
 
 /*
  * Finde die 10 heißesten Orte in der europäischen Zeitzone im Jahr 2025
@@ -587,6 +577,7 @@ LIMIT 10;
 /*
  * Finde die 10 Orte mit der höchsten Durchschnittstemperatur weltweit im Jahr 2025
  */
+CREATE OR REPLACE VIEW pbi_10_highest_temperatures_worldwide AS
 SELECT cwf.temperature_celsius AS avg_min_temperatur_celsius,
 cwf.location_name,
 cwf.country,
@@ -596,9 +587,12 @@ WHERE EXTRACT(YEAR FROM cwf.last_updated) = 2025
 ORDER BY cwf.temperature_celsius DESC
 LIMIT 10;
 
+SELECT * FROM pbi_10_highest_temperatures_worldwide;
+
 /*
  * Finde die 10 Orte mit der niedrigsten Durchschnittstemperatur weltweit im Jahr 2025
  */
+CREATE OR REPLACE VIEW pbi_10_lowest_temperatures_worldwide AS
 SELECT cwf.temperature_celsius AS avg_min_temperatur_celsius,
 cwf.location_name,
 cwf.country,
@@ -608,9 +602,12 @@ WHERE EXTRACT(YEAR FROM cwf.last_updated) = 2025
 ORDER BY cwf.temperature_celsius 
 LIMIT 10;
 
+SELECT * FROM pbi_10_lowest_temperatures_worldwide;
+
 /* 
  * Finde die weltweit höchste Windgeschwindigkeit einer 2025 auftretenden Windböe
  */
+CREATE OR REPLACE VIEW pbi_highest_wind_gust_worldwide AS
 SELECT cwf.gust_kph AS max_gusts_kph,
 cwf.wind_kph,
 cwf.location_name,
@@ -621,9 +618,12 @@ WHERE EXTRACT(YEAR FROM cwf.last_updated) = 2025
 ORDER BY cwf.gust_kph DESC 
 LIMIT 1;
 
+SELECT * FROM pbi_highest_wind_gust_worldwide;
+
 /*
  * Finde die 10 Orte mit der weltweit größten Luftverschmutzung mit CO 2025
  */
+CREATE OR REPLACE VIEW pbi_10_countries_with_most_worst_air_quality_worldwide AS
 SELECT ROUND(AVG(cwf.air_quality_carbon_monoxide), 2) AS avg_air_quality_carbon_monoxide,
 cwf.location_name,
 cwf.country
@@ -633,9 +633,12 @@ GROUP BY cwf.location_name, cwf.country
 ORDER BY avg_air_quality_carbon_monoxide DESC 
 LIMIT 10;
 
+SELECT * FROM pbi_10_countries_with_most_worst_air_quality_worldwide;
+
 /*
  * Finde die 10 Orte mit der weltweit niedrigsten Luftverschmutzung mit CO 2025
  */
+CREATE OR REPLACE VIEW pbi_10_contries_with_best_air_quality_worldwide AS
 SELECT ROUND(AVG(cwf.air_quality_carbon_monoxide), 2) AS avg_air_quality_carbon_monoxide,
 cwf.location_name,
 cwf.country
@@ -644,6 +647,8 @@ WHERE EXTRACT(YEAR FROM cwf.last_updated) = 2025
 GROUP BY cwf.location_name, cwf.country
 ORDER BY avg_air_quality_carbon_monoxide
 LIMIT 10;
+
+SELECT * FROM pbi_10_contries_with_best_air_quality_worldwide;
 
 /*
  * Erkennen von Zusammenhängen zwischen verschiedenen Parametern mittels Korrelationen
@@ -795,7 +800,6 @@ LIMIT 1;
  * diesen Orten die vollständige Bedeckung mit Kleidungsstücken oder das Aufhalten
  * ausschließlich in geschlossenen Räumen.
  */
-
 SELECT cwf.uv_index AS max_uv_index,
 cwf.location_name,
 cwf.country
