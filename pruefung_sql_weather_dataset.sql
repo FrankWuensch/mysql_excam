@@ -160,6 +160,22 @@ SELECT DISTINCT gwr.country, COUNT(gwr.country) AS ct_days
 FROM GlobalWeatherRepository gwr 
 GROUP BY gwr.country;
 
+SELECT MIN(gwr.temperature_celsius) AS abs_min_temp,
+gwr.location_name, gwr.country, COUNT(gwr.country) AS day_count
+FROM GlobalWeatherRepository gwr
+WHERE EXTRACT(YEAR FROM gwr.last_updated) = 2025
+GROUP BY gwr.location_name, gwr.country
+HAVING day_count = 365
+ORDER BY MIN(gwr.temperature_celsius);
+
+SELECT MAX(gwr.temperature_celsius) AS abs_max_temp,
+gwr.location_name, gwr.country, COUNT(gwr.country) AS day_count
+FROM GlobalWeatherRepository gwr
+WHERE EXTRACT(YEAR FROM gwr.last_updated) = 2025
+GROUP BY gwr.location_name, gwr.country
+HAVING day_count = 365
+ORDER BY MAX(gwr.temperature_celsius) DESC;
+
 /* 
  * Liste alle Länder auf, die vollständige Daten für das Jahr 2025 enthalten
  */
@@ -174,7 +190,7 @@ ORDER BY gwr.country;
 CREATE OR REPLACE VIEW pbi_countries_with_full_2025 AS
 WITH
 tb_countries_2025 AS (
-	SELECT DISTINCT gwr.country, 
+	SELECT gwr.country, 
 	gwr.location_name,
 	gwr.timezone,
 	gwr.latitude, 
@@ -204,17 +220,19 @@ tb_countries_2025 AS (
 	EXTRACT(MONTH FROM gwr.last_updated) AS month_number
 	FROM GlobalWeatherRepository gwr
 	WHERE EXTRACT(YEAR FROM gwr.last_updated) = 2025
-	OR gwr.location_name = 'Chi-Chi-Erh'  -- Ausreißer
 	ORDER BY gwr.country, gwr.last_updated
 )
 SELECT *
 FROM tb_countries_2025
 WHERE country IN (
-    SELECT country
-    FROM tb_countries_2025
-    GROUP BY country, timezone
-    HAVING COUNT(*) = 365
+    SELECT DISTINCT country 
+    FROM v_countries_with_full_2025
 );
+
+SELECT COUNT(*) FROM pbi_countries_with_full_2025;
+
+SELECT * FROM pbi_countries_with_full_2025
+WHERE location_name LIKE '%-%-%';
 
 SELECT DISTINCT country, timezone FROM pbi_countries_with_full_2025;
 
@@ -253,7 +271,6 @@ SELECT * FROM pbi_european_timezone_2025;
  * Analysen deutschlandweit und europaweit - Aufgabe 1
  -------------------------------------------------- */
 
-
 /* 
  * Erstellen einer VIEW, die alle Wetterdaten für das Jahr 2025 in Deutschland speichert
  * Verwendung für Analysen, die sich auf die Monate oder das gesamte Jahr beziehen
@@ -289,6 +306,40 @@ CREATE OR REPLACE VIEW v_weather_germany_2025 AS (
 CREATE OR REPLACE VIEW pbi_weather_germany_2025 AS (
 	SELECT * FROM v_weather_germany_2025
 );
+
+SELECT * FROM pbi_weather_germany_2025;
+
+/*
+ * Berechne die Regensumme für Deutschland 2025 und erstelle eine View für PowerBI
+ */
+CREATE OR REPLACE VIEW pbi_sum_rain_germany_2025 AS
+SELECT SUM(wg.precip_mm) AS sum_precip_mm FROM pbi_weather_germany_2025 wg;
+
+SELECT * FROM pbi_sum_rain_germany_2025;
+
+/*
+ * Berechne die Durchschnittstemperatur für Deutschland 2025 und erstelle eine View für PowerBI
+ */
+CREATE OR REPLACE VIEW pbi_avg_temperature_germany_2025 AS
+SELECT ROUND(AVG(wg.temperature_celsius), 2) AS avg_temp_germany FROM pbi_weather_germany_2025 wg;
+
+SELECT * FROM pbi_avg_temperature_germany_2025;
+
+/*
+ * Berechne die minimale Temperatur für Deutschland 2025 und erstelle eine View für PowerBI
+ */
+CREATE OR REPLACE VIEW pbi_min_temperature_germany_2025 AS
+SELECT MIN(wg.temperature_celsius) AS min_temp_germany FROM pbi_weather_germany_2025 wg;
+
+SELECT * FROM pbi_min_temperature_germany_2025;
+
+/*
+ * Berechne die maximale Temperatur für Deutschland 2025 und erstelle eine View für PowerBI
+ */
+CREATE OR REPLACE VIEW pbi_max_temperature_germany_2025 AS
+SELECT MAX(wg.temperature_celsius) AS max_temp_germany FROM pbi_weather_germany_2025 wg;
+
+SELECT * FROM pbi_max_temperature_germany_2025;
 
 /* 
  * Erstellen einer VIEW, die alle Wetterdaten im Zeitraum 21.12.2024 bis 20.12.2025 in Deutschland speichert
@@ -511,9 +562,48 @@ END;
 SELECT * FROM pbi_air_quality_germany;
 
 /*
- * Finde die 10 heißesten Orte in der europäischen Zeitzone im Jahr 2025
+ * Analysen bezogen auf die europäische Zeitzone
  */
-CREATE OR REPLACE VIEW pbi_10_highest_temperatures_europe_2025 AS
+
+/*
+ * Berechne die durchschnittliche Temperatur 2025 und erstelle eine View für PowerBI
+ */
+CREATE OR REPLACE VIEW pbi_avg_temperature_european_timezone_2025 AS
+SELECT ROUND(AVG(et.temperature_celsius), 2) AS avg_temp_european_timezone_2025
+FROM pbi_european_timezone_2025 et;
+
+SELECT * FROM pbi_avg_temperature_european_timezone_2025;
+
+/*
+ * Berechne die minimale Temperatur 2025 und erstelle eine View für PowerBI
+ */
+CREATE OR REPLACE VIEW pbi_min_temperature_european_timezone_2025 AS
+SELECT MIN(et.temperature_celsius) AS min_temp_european_timezone_2025,
+et.location_name, et.country
+FROM pbi_european_timezone_2025 et
+GROUP BY et.location_name, et.country
+ORDER BY min_temp_european_timezone_2025 DESC
+LIMIT 1;
+
+SELECT * FROM pbi_min_temperature_european_timezone_2025;
+
+/*
+ * Berechne die maximale Temperatur 2025 und erstelle eine View für PowerBI
+ */
+CREATE OR REPLACE VIEW pbi_max_temperature_european_timezone_2025 AS
+SELECT MAX(et.temperature_celsius) AS max_temp_european_timezone_2025,
+et.location_name, et.country
+FROM pbi_european_timezone_2025 et
+GROUP BY et.location_name, et.country
+ORDER BY max_temp_european_timezone_2025
+LIMIT 1;
+
+SELECT * FROM pbi_max_temperature_european_timezone_2025;
+
+/*
+ * Finde die 10 heißesten Länder in der europäischen Zeitzone im Jahr 2025
+ */
+CREATE OR REPLACE VIEW pbi_avg_10_highest_temperatures_europe_2025 AS
 SELECT cwf.country, 
 ROUND(AVG(cwf.temperature_celsius), 2) AS avg_temperature_celsius,
 DENSE_RANK() OVER(ORDER BY AVG(cwf.temperature_celsius) DESC) AS `ranking`
@@ -523,12 +613,12 @@ GROUP BY cwf.country, cwf.timezone
 ORDER BY `ranking`, cwf.country
 LIMIT 10;
 
-SELECT * FROM pbi_10_highest_temperatures_europe_2025;
+SELECT * FROM pbi_avg_10_highest_temperatures_europe_2025;
 
 /*
- * Finde die 10 kältesten Orte in der europäischen Zeitzone im Jahr 2025
+ * Finde die 10 kältesten Länder in der europäischen Zeitzone im Jahr 2025
  */
-CREATE OR REPLACE VIEW pbi_10_lowest_temperatures_europe_2025 AS
+CREATE OR REPLACE VIEW pbi_avg_10_lowest_temperatures_europe_2025 AS
 SELECT cwf.country, 
 ROUND(AVG(cwf.temperature_celsius), 2) AS avg_temperature_celsius,
 DENSE_RANK() OVER(ORDER BY AVG(cwf.temperature_celsius)) AS `ranking`
@@ -538,13 +628,43 @@ GROUP BY cwf.country, cwf.timezone
 ORDER BY `ranking`, cwf.country
 LIMIT 10;
 
-SELECT * FROM pbi_10_lowest_temperatures_europe_2025;
+SELECT * FROM pbi_avg_10_lowest_temperatures_europe_2025;
 
 
 /* ---------------------------------------------------------
  * Analysen weltweit mit Fokus auf Wetterextreme - Aufgabe 2
  -------------------------------------------------------- */
 
+/*
+ * Berechne die weltweite Durchschnittstemperatur und erstelle eine View für PowerBI
+ */
+CREATE OR REPLACE VIEW pbi_avg_temperature_worldwide_2025 AS 
+SELECT ROUND(AVG(cwf.temperature_celsius), 2) AS avg_temperature_worldwide_2025
+FROM pbi_countries_with_full_2025 cwf;
+
+SELECT * FROM pbi_avg_temperature_worldwide_2025;
+
+/*
+ * Berechne die minimale Temperatur weltweit und erstelle eine View für PowerBI
+ */
+CREATE OR REPLACE VIEW pbi_min_temperature_worldwide_2025 AS 
+SELECT MIN(cwf.temperature_celsius) AS min_temperature_worldwide_2025,
+cwf.location_name, cwf.country
+FROM pbi_countries_with_full_2025 cwf
+GROUP BY cwf.location_name, cwf.country
+ORDER BY min_temperature_worldwide_2025
+LIMIT 1;
+
+SELECT * FROM pbi_min_temperature_worldwide_2025;
+
+/*
+ * Berechne die maximale Temperatur weltweit und erstelle eine View für PowerBI
+ */
+CREATE OR REPLACE VIEW pbi_max_temperature_worldwide_2025 AS 
+SELECT MAX(cwf.temperature_celsius) AS max_temperature_worldwide_2025
+FROM pbi_countries_with_full_2025 cwf;
+
+SELECT * FROM pbi_max_temperature_worldwide_2025;
 
 /*
  * Finde die 10 Orte mit der höchsten Durchschnittstemperatur weltweit im Jahr 2025
@@ -628,7 +748,6 @@ SELECT * FROM pbi_10_countries_with_best_air_quality_worldwide;
  * Verwendung von STDDEV_POP sorgt dafür, dass NULL-Werte automatisch ignoriert werden
  * (ähnlich wie COALESCE(0))
  */
-
 
 /*
  * Gibt es einen Zusammenhang zwischen der Menge an Feinstaubpartikeln < 2.5 Mikrometern
