@@ -263,7 +263,8 @@ CASE
 END, cwf.country, cwf.timezone;
 
 CREATE OR REPLACE VIEW pbi_european_timezone_2025 AS
-SELECT * FROM v_grouped_timezones;
+SELECT * FROM v_grouped_timezones gt
+WHERE gt.timezone LIKE '%europe%';
 
 
 /* ---------------------------------------------------
@@ -355,8 +356,8 @@ wgs.air_quality_ozone,
 wgs.air_quality_nitrogen_dioxide,
 wgs.air_quality_sulphur_dioxide,
 wgs.cloud,
-get_season(DATE_FORMAT(wgs.last_updated, '%Y-%m-%d')) AS season,
-get_month(DATE_FORMAT(wgs.last_updated, '%Y-%m-%d')) AS `month`,
+get_season(DATE(wgs.last_updated)) AS season,
+get_month(DATE(wgs.last_updated)) AS `month`,
 EXTRACT(MONTH FROM wgs.last_updated) AS month_number
 FROM v_weather_germany_seasons wgs;
 
@@ -547,6 +548,7 @@ SELECT * FROM pbi_air_quality_germany;
 /*
  * Finde die 10 heißesten Orte in der europäischen Zeitzone im Jahr 2025
  */
+CREATE OR REPLACE VIEW pbi_10_highest_temperatures_europe_2025 AS
 SELECT vgt.country, 
 ROUND(AVG(vgt.avg_temperature_celsius), 2) AS avg_temperature_celsius,
 DENSE_RANK() OVER(ORDER BY AVG(vgt.avg_temperature_celsius) DESC) AS `ranking`
@@ -556,9 +558,12 @@ GROUP BY vgt.country
 ORDER BY `ranking`, vgt.country
 LIMIT 10;
 
+SELECT * FROM pbi_10_highest_temperatures_europe_2025;
+
 /*
  * Finde die 10 kältesten Orte in der europäischen Zeitzone im Jahr 2025
  */
+CREATE OR REPLACE VIEW pbi_10_lowest_temperatures_europe_2025 AS
 SELECT vgt.country, 
 ROUND(AVG(vgt.avg_temperature_celsius), 2) AS avg_temperature_celsius,
 DENSE_RANK() OVER(ORDER BY AVG(vgt.avg_temperature_celsius)) AS `ranking`
@@ -567,6 +572,8 @@ WHERE vgt.timezone LIKE '%europe%'
 GROUP BY vgt.country
 ORDER BY `ranking`, vgt.country
 LIMIT 10;
+
+SELECT * FROM pbi_10_lowest_temperatures_europe_2025;
 
 
 /* ---------------------------------------------------------
@@ -785,6 +792,7 @@ get_correlation_category(@corr_ozone_VS_uv_index) AS `Correlation category`;
 /*
  * Finde den Ort und den Zeitpunkt mit dem höchsten Wert des UV Index weltweit 2025
  */
+CREATE OR REPLACE VIEW pbi_highest_uv_index_worldwide_2025 AS
 SELECT cwf.uv_index AS max_uv_index,
 cwf.location_name,
 cwf.country
@@ -792,6 +800,8 @@ FROM pbi_countries_with_full_2025 cwf
 WHERE EXTRACT(YEAR FROM cwf.last_updated) = 2025
 ORDER BY cwf.uv_index DESC
 LIMIT 1;
+
+SELECT * FROM pbi_highest_uv_index_worldwide_2025;
 
 /*
  * Finde alle Orte, die 2025 einen maximalen UV Index von >= 11 aufwiesen.
