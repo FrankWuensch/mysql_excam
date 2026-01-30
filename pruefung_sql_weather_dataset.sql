@@ -577,6 +577,30 @@ END;
 SELECT * FROM pbi_air_quality_germany;
 
 /*
+ * Berechne die Niederschlagssume monatlich inkl. der durchschnittlichen
+ * Luftfeuchtigkeit für Deutschland (Berlin) 2025
+ */
+CREATE OR REPLACE VIEW pbi_avg_rain_germany_2025 AS
+WITH tb_avg_rain_monthly AS (
+    SELECT 
+        get_month(DATE(pwg.last_updated)) AS `month`,
+        EXTRACT(MONTH FROM pwg.last_updated) AS month_number,
+        SUM(pwg.precip_mm) AS sum_rain,
+        ROUND(AVG(pwg.humidity), 2) AS humidity,
+        DENSE_RANK() OVER (ORDER BY SUM(pwg.precip_mm) DESC) AS ranking
+    FROM pbi_weather_germany_2025 pwg
+    GROUP BY 
+        get_month(DATE(pwg.last_updated)),
+        EXTRACT(MONTH FROM pwg.last_updated)
+)
+SELECT DISTINCT *
+FROM tb_avg_rain_monthly srm
+ORDER BY srm.ranking;
+
+SELECT * FROM pbi_avg_rain_germany_2025;
+
+
+/*
  * Analysen bezogen auf die europäische Zeitzone
  */
 
