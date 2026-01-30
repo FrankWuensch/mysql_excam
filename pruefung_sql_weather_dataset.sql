@@ -37,17 +37,17 @@ DELIMITER //
  * Funktion zur Kategorisierung eines Korrelationswertes
  */
 CREATE FUNCTION get_correlation_category(value DECIMAL(4, 2))
-RETURNS VARCHAR(20)
+RETURNS VARCHAR(30)
 DETERMINISTIC
 BEGIN 
     IF ABS(value) >= 0.5 THEN  -- ABS verwendet den Betrag der Zahl, also ohne Beachtung des Vorzeichens
-        RETURN 'strong correlation';
+        RETURN 'Starke Korrelation';
     ELSEIF ABS(value) >= 0.3 THEN
-        RETURN 'medium correlation';
+        RETURN 'Mittlere Korrelation';
     ELSEIF ABS(value) >= 0.1 THEN
-        RETURN 'small correlation';
+        RETURN 'Geringe Korrelation';
     ELSE
-        RETURN 'no correlation';
+        RETURN 'Keine Korrelation';
     END IF;
 END //
 
@@ -59,17 +59,17 @@ RETURNS VARCHAR(30)
 DETERMINISTIC
 BEGIN
 	IF value >= 11 THEN
-		RETURN 'extreme risk';
+		RETURN 'Extremes Risiko';
 	ELSEIF value BETWEEN 8 AND 10 THEN 
-		RETURN 'very high risk';
+		RETURN 'Sehr hohes Risiko';
 	ELSEIF value BETWEEN 6 AND 7 THEN 
-		RETURN 'high risk';
+		RETURN 'Hohes Risiko';
 	ELSEIF value BETWEEN 3 AND 5 THEN 
-		RETURN 'medium risk';
+		RETURN 'Mittleres Risiko';
 	ELSEIF value BETWEEN 1 AND 2 THEN 
-		RETURN 'low risk';
+		RETURN 'Geringes Risiko';
 	ELSE 
-		RETURN 'no risk';
+		RETURN 'Kein Risiko';
 	END IF; 
 END //
 
@@ -84,13 +84,13 @@ RETURNS VARCHAR(30)
 DETERMINISTIC
 BEGIN
 	IF value BETWEEN DATE('2024-12-21') AND DATE('2025-03-19') THEN 
-		RETURN 'winter';
+		RETURN 'Winter';
 	ELSEIF value BETWEEN DATE('2025-03-20') AND DATE('2025-06-20') THEN
-		RETURN 'spring';
+		RETURN 'Frühling';
 	ELSEIF value BETWEEN DATE('2025-06-21') AND DATE('2025-09-21') THEN
-		RETURN 'summer';
+		RETURN 'Sommer';
 	ELSEIF value BETWEEN DATE('2025-09-22') AND DATE('2025-12-20') THEN
-		RETURN 'autumn';
+		RETURN 'Herbst';
 	ELSE
 		RETURN NULL;
 	END IF;
@@ -103,6 +103,7 @@ CREATE FUNCTION get_month(value DATE)
 RETURNS VARCHAR(30)
 DETERMINISTIC 
 BEGIN
+	SET lc_time_names = 'de_DE';  -- Rückgabe der deutschen Namen für Monate
 	RETURN DATE_FORMAT(value, '%M');
 END //
 
@@ -114,13 +115,13 @@ RETURNS VARCHAR(30)
 DETERMINISTIC
 BEGIN 
 	IF value BETWEEN 7.5 AND 10.0 THEN 
-		RETURN 'very high';
+		RETURN 'sehr schlecht';
 	ELSEIF value BETWEEN 5.0 AND 7.4 THEN 
-		RETURN 'high';
+		RETURN 'schlecht';
 	ELSEIF value BETWEEN 2.5 AND 4.9 THEN 
-		RETURN 'medium';
+		RETURN 'mittel';
 	ELSEIF value BETWEEN 0.0 AND 2.4 THEN
-		RETURN 'low';
+		RETURN 'gut';
 	END IF;
 END //
 
@@ -129,23 +130,23 @@ DELIMITER ;
 /*
  * Funktionstests
  */
-SELECT get_correlation_category(0.5)  AS correlation_category;  -- Erwartet: 'strong correlation'
-SELECT get_correlation_category(0.3)  AS correlation_category;  -- Erwartet: 'medium correlation'
-SELECT get_correlation_category(0.1)  AS correlation_category;  -- Erwartet: 'small correlation'
-SELECT get_correlation_category(-0.1) AS correlation_category;  -- Erwartet: 'small correlation'
-SELECT get_correlation_category(-0.3) AS correlation_category;  -- Erwartet: 'medium correlation'
-SELECT get_correlation_category(-0.5) AS correlation_category;  -- Erwartet: 'strong correlation'
+SELECT get_correlation_category(0.5)  AS correlation_category;  -- Erwartet: 'Starke Korrelation'
+SELECT get_correlation_category(0.3)  AS correlation_category;  -- Erwartet: 'Mittlere Korrelation'
+SELECT get_correlation_category(0.1)  AS correlation_category;  -- Erwartet: 'Geringe Korrelation'
+SELECT get_correlation_category(-0.1) AS correlation_category;  -- Erwartet: 'Geringe Korrelation'
+SELECT get_correlation_category(-0.3) AS correlation_category;  -- Erwartet: 'Mittlere Korrelation'
+SELECT get_correlation_category(-0.5) AS correlation_category;  -- Erwartet: 'Starke Korrelation'
 
-SELECT get_uv_risk(7) AS uv_risk_level;       -- Erwartet: 'high risk'
+SELECT get_uv_risk(7) AS uv_risk_level;       -- Erwartet: 'Hohes Risiko'
 
-SELECT get_season('2024-12-21') AS season;    -- Erwartet: 'winter'
+SELECT get_season('2024-12-21') AS season;    -- Erwartet: 'Winter'
 SELECT get_season('2024-12-20') AS season;    -- Erwartet: NULL
 
-SELECT get_month('2025-01-04') AS `month`;    -- Erwartet: 'January'
-SELECT get_month('2025-03-20') AS `month`;    -- Erwartet: 'March'
-SELECT get_month('2024-12-21') AS `month`;    -- Erwartet: 'December'
+SELECT get_month('2025-01-04') AS `month`;    -- Erwartet: 'Januar'
+SELECT get_month('2025-03-20') AS `month`;    -- Erwartet: 'März'
+SELECT get_month('2024-12-21') AS `month`;    -- Erwartet: 'Dezember'
 
-SELECT get_gb_defra_category(5) AS category;  -- Erwartet: 'high'
+SELECT get_gb_defra_category(5) AS category;  -- Erwartet: 'schlecht'
 
 /*
  * Mit den folgenden Abfragen verschaffe ich mir einen grundsätzlichen Überblick über 
@@ -159,75 +160,44 @@ SELECT DISTINCT gwr.country, COUNT(gwr.country) AS ct_days
 FROM GlobalWeatherRepository gwr 
 GROUP BY gwr.country;
 
+SELECT MIN(gwr.temperature_celsius) AS abs_min_temp,
+gwr.location_name, gwr.country, COUNT(gwr.country) AS day_count
+FROM GlobalWeatherRepository gwr
+WHERE EXTRACT(YEAR FROM gwr.last_updated) = 2025
+GROUP BY gwr.location_name, gwr.country
+HAVING day_count = 365
+ORDER BY MIN(gwr.temperature_celsius);
+
+SELECT MAX(gwr.temperature_celsius) AS abs_max_temp,
+gwr.location_name, gwr.country, COUNT(gwr.country) AS day_count
+FROM GlobalWeatherRepository gwr
+WHERE EXTRACT(YEAR FROM gwr.last_updated) = 2025
+GROUP BY gwr.location_name, gwr.country
+HAVING day_count = 365
+ORDER BY MAX(gwr.temperature_celsius) DESC;
+
 /* 
  * Liste alle Länder auf, die vollständige Daten für das Jahr 2025 enthalten
  */
 CREATE OR REPLACE VIEW v_countries_with_full_2025 AS
-SELECT DISTINCT gwr.country, gwr.timezone, COUNT(gwr.country) AS ct_days
+SELECT gwr.location_name, gwr.country, gwr.timezone, 
+COUNT(gwr.location_name) AS ct_days
 FROM GlobalWeatherRepository gwr 
 WHERE EXTRACT(YEAR FROM gwr.last_updated) = 2025
-GROUP BY gwr.country, gwr.timezone
-HAVING COUNT(gwr.country) = 365
-ORDER BY gwr.country; 
+GROUP BY gwr.location_name, gwr.country, gwr.timezone
+HAVING COUNT(gwr.location_name) = 365
+ORDER BY gwr.location_name; 
 
-/*
- * Zähle alle Länder innerhalb der europäischen Zeitzone, die vollständige Daten
- * für das Jahr 2025 enthalten
- */
-SELECT DISTINCT gwr.country, gwr.timezone, COUNT(gwr.country) AS ct_days
-FROM GlobalWeatherRepository gwr 
-WHERE EXTRACT(YEAR FROM gwr.last_updated) = 2025
-AND gwr.timezone LIKE '%europe%'
-GROUP BY gwr.country, gwr.timezone
-HAVING COUNT(gwr.country) = 365
-ORDER BY gwr.country; 
+SELECT * FROM v_countries_with_full_2025 vcwf;
 
-SELECT COUNT(*) AS ct_days FROM GlobalWeatherRepository gwr 
-WHERE EXTRACT(YEAR FROM gwr.last_updated) = 2025
-AND gwr.location_name LIKE '%berlin%';
-
-/*
- * Durchschnittliche Wetterbedingungen hinsichtlich Zeitzonen und Länder 2025
- * Sortiert wird nach Ländern in der europäischen Zeitzone;
- * innerhalb der Zeitzonen wird alphabetisch aufsteigend nach Land sortiert
- * 
- * Die Abfrage wird als VIEW v_grouped_timezones abgespeichert, um die Daten nicht
- * bei jeder Abfrage neu filtern zu müssen.
- */
-CREATE OR REPLACE VIEW v_grouped_timezones AS 
-SELECT gwr.country, 
-gwr.timezone, 
-ROUND(AVG(gwr.temperature_celsius), 2) AS avg_temperature_celsius,
-ROUND(AVG(gwr.wind_kph)) AS avg_wind_kph,
-ROUND(AVG(gwr.gust_kph)) AS avg_gusts_kph,
-ROUND(AVG(gwr.pressure_mb), 1) AS avg_pressure_millibars,
-ROUND(AVG(gwr.humidity), 2) AS avg_percentage_humidity,
-ROUND(AVG(gwr.visibility_km)) AS avg_visibility_km,
-ROUND(AVG(gwr.cloud), 2) AS avg_percentage_cloud_cover,
-ROUND(AVG(gwr.feels_like_celsius), 2) AS avg_feels_like_celsios,
-ROUND(AVG(gwr.uv_index), 1) AS avg_uv_index
-FROM GlobalWeatherRepository gwr
-WHERE EXTRACT(YEAR FROM gwr.last_updated) = 2025
-GROUP BY gwr.country, gwr.timezone
-ORDER BY 
-CASE 
-	WHEN gwr.timezone LIKE '%europe%' THEN 0
-	ELSE 1
-END, gwr.country, gwr.timezone;
-
-
-/* ---------------------------------------------------
- * Analysen deutschlandweit und europaweit - Aufgabe 1
- -------------------------------------------------- */
-
-
-/* 
- * Erstellen einer VIEW, die alle Wetterdaten für das Jahr 2025 in Deutschland speichert
- * Verwendung für Analysen, die sich auf die Monate oder das gesamte Jahr beziehen
- */
-CREATE OR REPLACE VIEW v_weather_germany_2025 AS (
-	SELECT gwr.location_name,
-	gwr.country,
+CREATE OR REPLACE VIEW pbi_countries_with_full_2025 AS
+WITH
+tb_countries_2025 AS (
+	SELECT gwr.country, 
+	gwr.location_name,
+	gwr.timezone,
+	gwr.latitude, 
+	gwr.longitude,
 	gwr.temperature_celsius,
 	gwr.feels_like_celsius,
 	gwr.wind_kph,
@@ -241,12 +211,135 @@ CREATE OR REPLACE VIEW v_weather_germany_2025 AS (
 	gwr.air_quality_ozone,
 	gwr.air_quality_nitrogen_dioxide,
 	gwr.air_quality_sulphur_dioxide,
+	gwr.`air_quality_pm2.5`,
+	gwr.`air_quality_pm10`,
+	gwr.`air_quality_us-epa-index`,
+	gwr.`air_quality_gb-defra-index`,
 	gwr.cloud,
-	get_month(DATE_FORMAT(gwr.last_updated, '%Y-%m-%d')) AS `month`
+	gwr.uv_index,
+	gwr.last_updated,
+	get_season(DATE(gwr.last_updated)) AS season,
+	get_month(DATE(gwr.last_updated)) AS `month`,
+	EXTRACT(MONTH FROM gwr.last_updated) AS month_number
 	FROM GlobalWeatherRepository gwr
 	WHERE EXTRACT(YEAR FROM gwr.last_updated) = 2025
-	AND gwr.location_name LIKE '%berlin%'
+	ORDER BY gwr.country, gwr.last_updated
+)
+SELECT *
+FROM tb_countries_2025
+WHERE location_name IN (
+    SELECT DISTINCT vcwf.location_name 
+    FROM v_countries_with_full_2025 vcwf
 );
+
+SELECT COUNT(*) FROM pbi_countries_with_full_2025;
+
+SELECT DISTINCT country, timezone FROM pbi_countries_with_full_2025;
+
+/*
+ * Zeige alle Länder innerhalb der europäischen Zeitzone, die vollständige Daten
+ * für das Jahr 2025 enthalten
+ */
+SELECT DISTINCT pcwf.country, pcwf.timezone, COUNT(pcwf.country) AS ct_days
+FROM pbi_countries_with_full_2025 pcwf
+WHERE EXTRACT(YEAR FROM pcwf.last_updated) = 2025
+AND pcwf.timezone LIKE '%europe%'
+GROUP BY pcwf.country, pcwf.timezone
+HAVING COUNT(pcwf.country) = 365
+ORDER BY pcwf.country; 
+
+SELECT COUNT(*) AS ct_days FROM pbi_countries_with_full_2025 pcwf
+WHERE EXTRACT(YEAR FROM pcwf.last_updated) = 2025
+AND pcwf.location_name LIKE '%berlin%';
+
+/*
+ * Durchschnittliche Wetterbedingungen hinsichtlich Zeitzonen und Länder 2025
+ * Sortiert wird nach Ländern in der europäischen Zeitzone;
+ * innerhalb der Zeitzonen wird alphabetisch aufsteigend nach Land sortiert
+ * 
+ * Die Abfrage wird als VIEW v_grouped_timezones abgespeichert, um die Daten nicht
+ * bei jeder Abfrage neu filtern zu müssen.
+ */
+CREATE OR REPLACE VIEW pbi_european_timezone_2025 AS
+SELECT * FROM pbi_countries_with_full_2025 pcwf
+WHERE pcwf.timezone LIKE '%europe%';
+
+SELECT * FROM pbi_european_timezone_2025;
+
+
+/* ---------------------------------------------------
+ * Analysen deutschlandweit und europaweit - Aufgabe 1
+ -------------------------------------------------- */
+
+/* 
+ * Erstellen einer VIEW, die alle Wetterdaten für das Jahr 2025 in Deutschland speichert
+ * Verwendung für Analysen, die sich auf die Monate oder das gesamte Jahr beziehen
+ */
+CREATE OR REPLACE VIEW v_weather_germany_2025 AS (
+	SELECT pcwf.location_name,
+	pcwf.country,
+	pcwf.temperature_celsius,
+	pcwf.feels_like_celsius,
+	pcwf.wind_kph,
+	pcwf.gust_kph,
+	pcwf.wind_direction,
+	pcwf.pressure_mb,
+	pcwf.precip_mm,
+	pcwf.humidity,
+	pcwf.visibility_km,
+	pcwf.air_quality_carbon_monoxide,
+	pcwf.air_quality_ozone,
+	pcwf.air_quality_nitrogen_dioxide,
+	pcwf.air_quality_sulphur_dioxide,
+	pcwf.`air_quality_us-epa-index`,
+	pcwf.`air_quality_gb-defra-index`,
+	pcwf.cloud,
+	pcwf.last_updated,
+	get_month(DATE(pcwf.last_updated)) AS `month`,
+	EXTRACT(MONTH FROM pcwf.last_updated) AS month_number
+	FROM pbi_countries_with_full_2025 pcwf
+	WHERE EXTRACT(YEAR FROM pcwf.last_updated) = 2025
+	AND pcwf.location_name LIKE '%berlin%'
+	ORDER BY pcwf.last_updated
+);
+
+CREATE OR REPLACE VIEW pbi_weather_germany_2025 AS (
+	SELECT * FROM v_weather_germany_2025
+);
+
+SELECT * FROM pbi_weather_germany_2025;
+
+/*
+ * Berechne die Regensumme für Deutschland 2025 und erstelle eine View für PowerBI
+ */
+CREATE OR REPLACE VIEW pbi_sum_rain_germany_2025 AS
+SELECT SUM(wg.precip_mm) AS sum_precip_mm FROM pbi_weather_germany_2025 wg;
+
+SELECT * FROM pbi_sum_rain_germany_2025;
+
+/*
+ * Berechne die Durchschnittstemperatur für Deutschland 2025 und erstelle eine View für PowerBI
+ */
+CREATE OR REPLACE VIEW pbi_avg_temperature_germany_2025 AS
+SELECT ROUND(AVG(wg.temperature_celsius), 2) AS avg_temp_germany FROM pbi_weather_germany_2025 wg;
+
+SELECT * FROM pbi_avg_temperature_germany_2025;
+
+/*
+ * Berechne die minimale Temperatur für Deutschland 2025 und erstelle eine View für PowerBI
+ */
+CREATE OR REPLACE VIEW pbi_min_temperature_germany_2025 AS
+SELECT MIN(wg.temperature_celsius) AS min_temp_germany FROM pbi_weather_germany_2025 wg;
+
+SELECT * FROM pbi_min_temperature_germany_2025;
+
+/*
+ * Berechne die maximale Temperatur für Deutschland 2025 und erstelle eine View für PowerBI
+ */
+CREATE OR REPLACE VIEW pbi_max_temperature_germany_2025 AS
+SELECT MAX(wg.temperature_celsius) AS max_temp_germany FROM pbi_weather_germany_2025 wg;
+
+SELECT * FROM pbi_max_temperature_germany_2025;
 
 /* 
  * Erstellen einer VIEW, die alle Wetterdaten im Zeitraum 21.12.2024 bis 20.12.2025 in Deutschland speichert
@@ -270,11 +363,19 @@ CREATE OR REPLACE VIEW v_weather_germany_seasons AS (
 	gwr.air_quality_sulphur_dioxide,
 	gwr.cloud,
 	gwr.last_updated,
-	get_season(DATE_FORMAT(gwr.last_updated, '%Y-%m-%d')) AS season
+	get_season(DATE(gwr.last_updated)) AS season,
+	get_month(DATE(gwr.last_updated)) AS `month`,
+	EXTRACT(MONTH FROM gwr.last_updated) AS month_number
 	FROM GlobalWeatherRepository gwr
-	WHERE DATE_FORMAT(gwr.last_updated, '%Y-%m-%d') BETWEEN DATE('2024-12-21') AND DATE('2025-12-20')
+	WHERE DATE(gwr.last_updated) BETWEEN DATE('2024-12-21') AND DATE('2025-12-20')
 	AND gwr.location_name LIKE '%berlin%'
+	ORDER BY gwr.last_updated
 );
+
+CREATE OR REPLACE VIEW pbi_weather_germany_with_seasons AS
+SELECT * FROM v_weather_germany_seasons;
+
+SELECT * FROM pbi_weather_germany_with_seasons;
 
 /*
  * Finde
@@ -329,9 +430,9 @@ FROM v_weather_germany_seasons vws
 GROUP BY vws.season WITH ROLLUP
 ORDER BY 
 CASE
-	WHEN vws.season LIKE 'win%' THEN 0
-	WHEN vws.season LIKE 'spr%' THEN 1
-	WHEN vws.season LIKE 'sum%' THEN 2
+	WHEN vws.season LIKE 'Win%' THEN 0
+	WHEN vws.season LIKE 'Frü%' THEN 1
+	WHEN vws.season LIKE 'Som%' THEN 2
 	ELSE 3
 END;
 
@@ -343,6 +444,7 @@ END;
  * 2025 IN Deutschland (Berlin)
  * bezogen auf die Monate Januar bis Dezember 2025
  */
+CREATE OR REPLACE VIEW v_day_count_weather_conditions_germany_2025 AS
 SELECT
 COALESCE(vwg.`month`, 'TOTAL') AS `month`,
 COUNT(
@@ -363,14 +465,64 @@ ORDER BY
 CASE
 	WHEN vwg.`month` LIKE 'Jan%' THEN 0
 	WHEN vwg.`month` LIKE 'Feb%' THEN 1
-	WHEN vwg.`month` LIKE 'Mar%' THEN 2
+	WHEN vwg.`month` LIKE 'Mär%' THEN 2
 	WHEN vwg.`month` LIKE 'Apr%' THEN 3
-	WHEN vwg.`month` LIKE 'May'  THEN 4
+	WHEN vwg.`month` LIKE 'Mai'  THEN 4
 	WHEN vwg.`month` LIKE 'Jun%' THEN 5
 	WHEN vwg.`month` LIKE 'Jul%' THEN 6
 	WHEN vwg.`month` LIKE 'Aug%' THEN 7
 	WHEN vwg.`month` LIKE 'Sep%' THEN 8
-	WHEN vwg.`month` LIKE 'Oct%' THEN 9
+	WHEN vwg.`month` LIKE 'Okt%' THEN 9
+	WHEN vwg.`month` LIKE 'Nov%' THEN 10
+	ELSE 11
+END;
+
+SELECT * FROM v_day_count_weather_conditions_germany_2025;
+
+CREATE OR REPLACE VIEW pbi_day_count_weather_conditions_germany_2025 AS
+SELECT
+vwg.`month`,
+LEFT(vwg.`month`, 3) AS month_short,
+CASE
+	WHEN vwg.`month` LIKE 'Jan%' THEN 1
+	WHEN vwg.`month` LIKE 'Feb%' THEN 2
+	WHEN vwg.`month` LIKE 'Mär%' THEN 3
+	WHEN vwg.`month` LIKE 'Apr%' THEN 4
+	WHEN vwg.`month` LIKE 'Mai'  THEN 5
+	WHEN vwg.`month` LIKE 'Jun%' THEN 6
+	WHEN vwg.`month` LIKE 'Jul%' THEN 7
+	WHEN vwg.`month` LIKE 'Aug%' THEN 8
+	WHEN vwg.`month` LIKE 'Sep%' THEN 9
+	WHEN vwg.`month` LIKE 'Okt%' THEN 10
+	WHEN vwg.`month` LIKE 'Nov%' THEN 11
+	ELSE 12
+END as month_number,
+COUNT(
+CASE 
+	WHEN cloud < 50 AND NOT precip_mm > 0 THEN 1 
+END) AS sunny_days,
+COUNT(
+CASE 
+	WHEN cloud >= 50 AND NOT precip_mm > 0 THEN 1 
+END) AS cloudy_days,
+COUNT(
+CASE 
+	WHEN precip_mm > 0 THEN 1 
+END) AS rainy_days
+FROM v_weather_germany_2025 vwg 
+GROUP BY vwg.`month`
+ORDER BY 
+CASE
+	WHEN vwg.`month` LIKE 'Jan%' THEN 0
+	WHEN vwg.`month` LIKE 'Feb%' THEN 1
+	WHEN vwg.`month` LIKE 'Mär%' THEN 2
+	WHEN vwg.`month` LIKE 'Apr%' THEN 3
+	WHEN vwg.`month` LIKE 'Mai'  THEN 4
+	WHEN vwg.`month` LIKE 'Jun%' THEN 5
+	WHEN vwg.`month` LIKE 'Jul%' THEN 6
+	WHEN vwg.`month` LIKE 'Aug%' THEN 7
+	WHEN vwg.`month` LIKE 'Sep%' THEN 8
+	WHEN vwg.`month` LIKE 'Okt%' THEN 9
 	WHEN vwg.`month` LIKE 'Nov%' THEN 10
 	ELSE 11
 END;
@@ -380,181 +532,238 @@ END;
  * und gruppiere sie nach Monaten zur Einschätzung der Luftqualität in Berlin 2025
  * pro Monat
  */
+CREATE OR REPLACE VIEW pbi_air_quality_germany AS
 WITH tb_air_quality AS (
-	SELECT gwr.location_name, 
-	get_month(DATE_FORMAT(gwr.last_updated, '%Y-%m-%d')) AS `month`,
-	get_gb_defra_category(gwr.`air_quality_gb-defra-index`) AS air_quality_badness_category,
-	COUNT(get_gb_defra_category(gwr.`air_quality_gb-defra-index`)) AS ct_air_quality_category
-	FROM GlobalWeatherRepository gwr 
-	WHERE EXTRACT(YEAR FROM gwr.last_updated) = 2025
-	AND gwr.location_name LIKE '%berlin%'
-	GROUP BY `month`, gwr.`air_quality_gb-defra-index`, gwr.location_name
+	SELECT vwg.location_name, 
+	get_month(DATE(vwg.last_updated)) AS `month`,
+	get_gb_defra_category(vwg.`air_quality_gb-defra-index`) AS air_quality_badness_category,
+	COUNT(get_gb_defra_category(vwg.`air_quality_gb-defra-index`)) AS ct_air_quality_category,
+	vwg.last_updated,
+	EXTRACT(MONTH FROM vwg.last_updated) AS month_number
+	FROM v_weather_germany_2025 vwg 
+	WHERE EXTRACT(YEAR FROM vwg.last_updated) = 2025
+	AND vwg.location_name LIKE '%berlin%'
+	GROUP BY vwg.`month`, vwg.last_updated, vwg.`air_quality_gb-defra-index`, vwg.location_name
 )
-SELECT aq.location_name, 
+SELECT DISTINCT aq.location_name, 
 aq.`month`,
-aq.air_quality_badness_category as air_quality_badness_category,
-SUM(aq.ct_air_quality_category) AS ct_air_quality_category
+aq.air_quality_badness_category AS air_quality_badness_category,
+SUM(aq.ct_air_quality_category) AS ct_air_quality_category,
+aq.month_number
 FROM tb_air_quality aq
-GROUP BY aq.air_quality_badness_category, aq.location_name, aq.`month`
-ORDER BY 
+GROUP BY aq.air_quality_badness_category, aq.location_name, aq.`month`, aq.month_number
+ORDER BY
 CASE
-	WHEN `month` LIKE 'Jan%' THEN 0
-	WHEN `month` LIKE 'Feb%' THEN 1
-	WHEN `month` LIKE 'Mar%' THEN 2
-	WHEN `month` LIKE 'Apr%' THEN 3
-	WHEN `month` LIKE 'May'  THEN 4
-	WHEN `month` LIKE 'Jun%' THEN 5
-	WHEN `month` LIKE 'Jul%' THEN 6
-	WHEN `month` LIKE 'Aug%' THEN 7
-	WHEN `month` LIKE 'Sep%' THEN 8
-	WHEN `month` LIKE 'Oct%' THEN 9
-	WHEN `month` LIKE 'Nov%' THEN 10
+	WHEN aq.`month` LIKE 'Jan%' THEN 0
+	WHEN aq.`month` LIKE 'Feb%' THEN 1
+	WHEN aq.`month` LIKE 'Mär%' THEN 2
+	WHEN aq.`month` LIKE 'Apr%' THEN 3
+	WHEN aq.`month` LIKE 'Mai'  THEN 4
+	WHEN aq.`month` LIKE 'Jun%' THEN 5
+	WHEN aq.`month` LIKE 'Jul%' THEN 6
+	WHEN aq.`month` LIKE 'Aug%' THEN 7
+	WHEN aq.`month` LIKE 'Sep%' THEN 8
+	WHEN aq.`month` LIKE 'Okt%' THEN 9
+	WHEN aq.`month` LIKE 'Nov%' THEN 10
 	ELSE 11
 END,
 CASE
-	WHEN aq.air_quality_badness_category = 'very high' THEN 0
-	WHEN aq.air_quality_badness_category = 'high' THEN 1 
-	WHEN aq.air_quality_badness_category = 'medium' THEN 2 
-	WHEN aq.air_quality_badness_category = 'low' THEN 3
+	WHEN aq.air_quality_badness_category = 'sehr schlecht' THEN 0
+	WHEN aq.air_quality_badness_category = 'schlecht' THEN 1 
+	WHEN aq.air_quality_badness_category = 'mittel' THEN 2 
+	WHEN aq.air_quality_badness_category = 'gut' THEN 3
 END;
 
-/*
- * Zähle die Tage in Australien je nach Luftqualitätsindex
- * und gruppiere sie nach Monaten zur Einschätzung der Luftqualität in Australien 2025
- * pro Monat
- * 
- * Erwartetes Ergebnis:
- * Erhöhte Werte in den Monaten Januar, März, April und Dezember wegen schwerer Waldbrände
- * in Victoria, Westaustralien und New South Wales
- */
-WITH tb_air_quality AS (
-	SELECT gwr.location_name,
-	get_month(DATE_FORMAT(gwr.last_updated, '%Y-%m-%d')) AS `month`,
-	get_gb_defra_category(gwr.`air_quality_gb-defra-index`) AS air_quality_badness_category,
-	COUNT(get_gb_defra_category(gwr.`air_quality_gb-defra-index`)) AS ct_air_quality_category
-	FROM GlobalWeatherRepository gwr 
-	WHERE EXTRACT(YEAR FROM gwr.last_updated) = 2025
-	AND gwr.country LIKE '%australia%'
-	GROUP BY `month`, gwr.`air_quality_gb-defra-index`, gwr.location_name
-)
-SELECT aq.location_name, 
-aq.`month`,
-aq.air_quality_badness_category as air_quality_badness_category,
-SUM(aq.ct_air_quality_category) AS ct_air_quality_category
-FROM tb_air_quality aq
-GROUP BY aq.air_quality_badness_category, aq.location_name, aq.`month`
-ORDER BY 
-CASE
-	WHEN `month` LIKE 'Jan%' THEN 0
-	WHEN `month` LIKE 'Feb%' THEN 1
-	WHEN `month` LIKE 'Mar%' THEN 2
-	WHEN `month` LIKE 'Apr%' THEN 3
-	WHEN `month` LIKE 'May'  THEN 4
-	WHEN `month` LIKE 'Jun%' THEN 5
-	WHEN `month` LIKE 'Jul%' THEN 6
-	WHEN `month` LIKE 'Aug%' THEN 7
-	WHEN `month` LIKE 'Sep%' THEN 8
-	WHEN `month` LIKE 'Oct%' THEN 9
-	WHEN `month` LIKE 'Nov%' THEN 10
-	ELSE 11
-END,
-CASE
-	WHEN aq.air_quality_badness_category = 'very high' THEN 0
-	WHEN aq.air_quality_badness_category = 'high' THEN 1 
-	WHEN aq.air_quality_badness_category = 'medium' THEN 2 
-	WHEN aq.air_quality_badness_category = 'low' THEN 3
-END;
+SELECT * FROM pbi_air_quality_germany;
 
 /*
- * Finde die 10 heißesten Orte in der europäischen Zeitzone im Jahr 2025
+ * Analysen bezogen auf die europäische Zeitzone
  */
-SELECT vgt.country, 
-ROUND(AVG(vgt.avg_temperature_celsius), 2) AS avg_temperature_celsius,
-DENSE_RANK() OVER(ORDER BY AVG(vgt.avg_temperature_celsius) DESC) AS `ranking`
-FROM v_grouped_timezones vgt
-WHERE vgt.timezone LIKE '%europe%'
-GROUP BY vgt.country
-ORDER BY `ranking`, vgt.country
-LIMIT 10;
 
 /*
- * Finde die 10 kältesten Orte in der europäischen Zeitzone im Jahr 2025
+ * Berechne die durchschnittliche Temperatur 2025 und erstelle eine View für PowerBI
  */
-SELECT vgt.country, 
-ROUND(AVG(vgt.avg_temperature_celsius), 2) AS avg_temperature_celsius,
-DENSE_RANK() OVER(ORDER BY AVG(vgt.avg_temperature_celsius)) AS `ranking`
-FROM v_grouped_timezones vgt 
-WHERE vgt.timezone LIKE '%europe%'
-GROUP BY vgt.country
-ORDER BY `ranking`, vgt.country
+CREATE OR REPLACE VIEW pbi_avg_temperature_european_timezone_2025 AS
+SELECT ROUND(AVG(pet.temperature_celsius), 2) AS avg_temp_european_timezone_2025
+FROM pbi_european_timezone_2025 pet;
+
+SELECT * FROM pbi_avg_temperature_european_timezone_2025;
+
+/*
+ * Berechne die minimale Temperatur 2025 und erstelle eine View für PowerBI
+ */
+CREATE OR REPLACE VIEW pbi_min_temperature_european_timezone_2025 AS
+SELECT MIN(pet.temperature_celsius) AS min_temp_european_timezone_2025,
+pet.location_name, pet.country
+FROM pbi_european_timezone_2025 pet
+GROUP BY pet.location_name, pet.country
+ORDER BY min_temp_european_timezone_2025
+LIMIT 1;
+
+SELECT * FROM pbi_min_temperature_european_timezone_2025;
+
+/*
+ * Berechne die maximale Temperatur 2025 und erstelle eine View für PowerBI
+ */
+CREATE OR REPLACE VIEW pbi_max_temperature_european_timezone_2025 AS
+SELECT MAX(pet.temperature_celsius) AS max_temp_european_timezone_2025,
+pet.location_name, pet.country
+FROM pbi_european_timezone_2025 pet
+GROUP BY pet.location_name, pet.country
+ORDER BY max_temp_european_timezone_2025 DESC
+LIMIT 1;
+
+SELECT * FROM pbi_max_temperature_european_timezone_2025;
+
+/*
+ * Finde die 10 heißesten Länder in der europäischen Zeitzone im Jahr 2025
+ */
+CREATE OR REPLACE VIEW pbi_avg_10_highest_temperatures_europe_2025 AS
+SELECT pcwf.location_name, pcwf.country, 
+ROUND(AVG(pcwf.temperature_celsius), 2) AS avg_temperature_celsius,
+DENSE_RANK() OVER(ORDER BY AVG(pcwf.temperature_celsius) DESC) AS `ranking`
+FROM pbi_countries_with_full_2025 pcwf
+WHERE pcwf.timezone LIKE '%europe%'
+GROUP BY pcwf.location_name, pcwf.country, pcwf.timezone
+ORDER BY `ranking`, pcwf.country
 LIMIT 10;
+
+SELECT * FROM pbi_avg_10_highest_temperatures_europe_2025;
+
+/*
+ * Finde die 10 kältesten Länder in der europäischen Zeitzone im Jahr 2025
+ */
+CREATE OR REPLACE VIEW pbi_avg_10_lowest_temperatures_europe_2025 AS
+SELECT pcwf.location_name, pcwf.country, 
+ROUND(AVG(pcwf.temperature_celsius), 2) AS avg_temperature_celsius,
+DENSE_RANK() OVER(ORDER BY AVG(pcwf.temperature_celsius)) AS `ranking`
+FROM pbi_countries_with_full_2025 pcwf
+WHERE pcwf.timezone LIKE '%europe%'
+GROUP BY pcwf.location_name, pcwf.country, pcwf.timezone
+ORDER BY `ranking`, pcwf.country
+LIMIT 10;
+
+SELECT * FROM pbi_avg_10_lowest_temperatures_europe_2025;
 
 
 /* ---------------------------------------------------------
  * Analysen weltweit mit Fokus auf Wetterextreme - Aufgabe 2
  -------------------------------------------------------- */
 
+/*
+ * Berechne die weltweite Durchschnittstemperatur und erstelle eine View für PowerBI
+ */
+CREATE OR REPLACE VIEW pbi_avg_temperature_worldwide_2025 AS 
+SELECT ROUND(AVG(pcwf.temperature_celsius), 2) AS avg_temperature_worldwide_2025
+FROM pbi_countries_with_full_2025 pcwf;
+
+SELECT * FROM pbi_avg_temperature_worldwide_2025;
+
+/*
+ * Berechne die minimale Temperatur weltweit und erstelle eine View für PowerBI
+ */
+CREATE OR REPLACE VIEW pbi_min_temperature_worldwide_2025 AS 
+SELECT MIN(pcwf.temperature_celsius) AS min_temperature_worldwide_2025,
+pcwf.location_name, pcwf.country
+FROM pbi_countries_with_full_2025 pcwf
+GROUP BY pcwf.location_name, pcwf.country
+ORDER BY min_temperature_worldwide_2025
+LIMIT 1;
+
+SELECT * FROM pbi_min_temperature_worldwide_2025;
+
+/*
+ * Berechne die maximale Temperatur weltweit und erstelle eine View für PowerBI
+ */
+CREATE OR REPLACE VIEW pbi_max_temperature_worldwide_2025 AS 
+SELECT MAX(pcwf.temperature_celsius) AS max_temperature_worldwide_2025,
+pcwf.location_name, pcwf.country
+FROM pbi_countries_with_full_2025 pcwf
+GROUP BY pcwf.location_name, pcwf.country
+ORDER BY max_temperature_worldwide_2025 DESC
+LIMIT 1;
+
+SELECT * FROM pbi_max_temperature_worldwide_2025;
 
 /*
  * Finde die 10 Orte mit der höchsten Durchschnittstemperatur weltweit im Jahr 2025
  */
-SELECT gwr.temperature_celsius AS avg_min_temperatur_celsius,
-gwr.location_name,
-gwr.country,
-DATE_FORMAT(gwr.last_updated, '%M %Y') AS `date`
-FROM GlobalWeatherRepository gwr
-WHERE EXTRACT(YEAR FROM gwr.last_updated) = 2025
-ORDER BY gwr.temperature_celsius DESC
+CREATE OR REPLACE VIEW pbi_10_highest_temperatures_worldwide AS
+SELECT ROUND(AVG(pcwf.temperature_celsius), 2) AS avg_max_temperatur_celsius,
+pcwf.location_name,
+pcwf.country,
+RANK() OVER(ORDER BY AVG(pcwf.temperature_celsius) DESC) AS `ranking`
+FROM pbi_countries_with_full_2025 pcwf
+WHERE EXTRACT(YEAR FROM pcwf.last_updated) = 2025
+GROUP BY pcwf.location_name, pcwf.country
+ORDER BY avg_max_temperatur_celsius DESC
 LIMIT 10;
+
+SELECT * FROM pbi_10_highest_temperatures_worldwide;
 
 /*
  * Finde die 10 Orte mit der niedrigsten Durchschnittstemperatur weltweit im Jahr 2025
  */
-SELECT gwr.temperature_celsius AS avg_min_temperatur_celsius,
-gwr.location_name,
-gwr.country,
-DATE_FORMAT(gwr.last_updated, '%M %Y') AS `date`
-FROM GlobalWeatherRepository gwr
-WHERE EXTRACT(YEAR FROM gwr.last_updated) = 2025
-ORDER BY gwr.temperature_celsius 
+CREATE OR REPLACE VIEW pbi_10_lowest_temperatures_worldwide AS
+SELECT ROUND(AVG(pcwf.temperature_celsius), 2) AS avg_min_temperatur_celsius,
+pcwf.location_name,
+pcwf.country,
+RANK() OVER(ORDER BY AVG(pcwf.temperature_celsius)) AS `ranking`
+FROM pbi_countries_with_full_2025 pcwf
+WHERE EXTRACT(YEAR FROM pcwf.last_updated) = 2025
+GROUP BY pcwf.location_name, pcwf.country
+ORDER BY avg_min_temperatur_celsius
 LIMIT 10;
+
+SELECT * FROM pbi_10_lowest_temperatures_worldwide;
 
 /* 
  * Finde die weltweit höchste Windgeschwindigkeit einer 2025 auftretenden Windböe
  */
-SELECT gwr.gust_kph AS max_gusts_kph,
-gwr.wind_kph,
-gwr.location_name,
-gwr.country,
-gwr.last_updated
-FROM GlobalWeatherRepository gwr 
-WHERE EXTRACT(YEAR FROM gwr.last_updated) = 2025
-ORDER BY gwr.gust_kph DESC 
+CREATE OR REPLACE VIEW pbi_highest_wind_gust_worldwide AS
+SELECT pcwf.gust_kph AS max_gusts_kph,
+pcwf.wind_kph,
+pcwf.location_name,
+pcwf.country,
+pcwf.last_updated
+FROM pbi_countries_with_full_2025 pcwf
+WHERE EXTRACT(YEAR FROM pcwf.last_updated) = 2025
+ORDER BY pcwf.gust_kph DESC 
 LIMIT 1;
+
+SELECT * FROM pbi_highest_wind_gust_worldwide;
 
 /*
  * Finde die 10 Orte mit der weltweit größten Luftverschmutzung mit CO 2025
  */
-SELECT ROUND(AVG(gwr.air_quality_carbon_monoxide), 2) AS avg_air_quality_carbon_monoxide,
-gwr.location_name,
-gwr.country
-FROM GlobalWeatherRepository gwr 
-WHERE EXTRACT(YEAR FROM gwr.last_updated) = 2025
-GROUP BY gwr.location_name, gwr.country
+CREATE OR REPLACE VIEW pbi_10_countries_with_most_worst_air_quality_worldwide AS
+SELECT ROUND(AVG(pcwf.air_quality_carbon_monoxide), 2) AS avg_air_quality_carbon_monoxide,
+pcwf.location_name,
+pcwf.country,
+RANK() OVER(ORDER BY AVG(pcwf.air_quality_carbon_monoxide) DESC) AS `ranking`
+FROM pbi_countries_with_full_2025 pcwf
+WHERE EXTRACT(YEAR FROM pcwf.last_updated) = 2025
+GROUP BY pcwf.location_name, pcwf.country
 ORDER BY avg_air_quality_carbon_monoxide DESC 
 LIMIT 10;
+
+SELECT * FROM pbi_10_countries_with_most_worst_air_quality_worldwide;
 
 /*
  * Finde die 10 Orte mit der weltweit niedrigsten Luftverschmutzung mit CO 2025
  */
-SELECT ROUND(AVG(gwr.air_quality_carbon_monoxide), 2) AS avg_air_quality_carbon_monoxide,
-gwr.location_name,
-gwr.country
-FROM GlobalWeatherRepository gwr 
-WHERE EXTRACT(YEAR FROM gwr.last_updated) = 2025
-GROUP BY gwr.location_name, gwr.country
+CREATE OR REPLACE VIEW pbi_10_countries_with_best_air_quality_worldwide AS
+SELECT ROUND(AVG(pcwf.air_quality_carbon_monoxide), 2) AS avg_air_quality_carbon_monoxide,
+pcwf.location_name,
+pcwf.country,
+RANK() OVER(ORDER BY AVG(pcwf.air_quality_carbon_monoxide)) AS `ranking`
+FROM pbi_countries_with_full_2025 pcwf
+WHERE EXTRACT(YEAR FROM pcwf.last_updated) = 2025
+GROUP BY pcwf.location_name, pcwf.country
 ORDER BY avg_air_quality_carbon_monoxide
 LIMIT 10;
+
+SELECT * FROM pbi_10_countries_with_best_air_quality_worldwide;
 
 /*
  * Erkennen von Zusammenhängen zwischen verschiedenen Parametern mittels Korrelationen
@@ -563,16 +772,15 @@ LIMIT 10;
  * (ähnlich wie COALESCE(0))
  */
 
-
 /*
  * Gibt es einen Zusammenhang zwischen der Menge an Feinstaubpartikeln < 2.5 Mikrometern
  * und der Menge an Feinstaubpartikeln < 10 Mikrometern und wie stark ist 
  * dieser Zusammenhang?
  */
 SELECT 
-ROUND((AVG(gwr.`air_quality_pm2.5` * gwr.air_quality_pm10) - AVG(gwr.`air_quality_pm2.5`) * AVG(gwr.air_quality_pm10)) / 
-(STDDEV_POP(gwr.`air_quality_pm2.5`) * STDDEV_POP(gwr.air_quality_pm10)), 2) AS c_air_quality_pm2_5_VS_air_quality_pm10
-FROM GlobalWeatherRepository gwr INTO @corr_pm2_5_VS_pm10;
+ROUND((AVG(pcwf.`air_quality_pm2.5` * pcwf.air_quality_pm10) - AVG(pcwf.`air_quality_pm2.5`) * AVG(pcwf.air_quality_pm10)) / 
+(STDDEV_POP(pcwf.`air_quality_pm2.5`) * STDDEV_POP(pcwf.air_quality_pm10)), 2) AS c_air_quality_pm2_5_VS_air_quality_pm10
+FROM pbi_countries_with_full_2025 pcwf INTO @corr_pm2_5_VS_pm10;
 
 SELECT @corr_pm2_5_VS_pm10 AS `Correlation value between micro dust < 2.5 micrometer and micro dust < 10 micrometer`,
 get_correlation_category(@corr_pm2_5_VS_pm10) AS `Correlation category`;
@@ -590,9 +798,9 @@ get_correlation_category(@corr_pm2_5_VS_pm10) AS `Correlation category`;
  * Wie stark ist dieser Zusammenhang?
  */
 SELECT 
-ROUND((AVG(gwr.air_quality_pm10 * gwr.temperature_celsius) - AVG(gwr.air_quality_pm10) * AVG(gwr.temperature_celsius)) /
-(STDDEV_POP(gwr.air_quality_pm10) * STDDEV_POP(gwr.temperature_celsius)), 2) AS c_air_quality_pm10_VS_temperature_celsius
-FROM GlobalWeatherRepository gwr INTO @corr_pm10_VS_temperature_celsius;
+ROUND((AVG(pcwf.air_quality_pm10 * pcwf.temperature_celsius) - AVG(pcwf.air_quality_pm10) * AVG(pcwf.temperature_celsius)) /
+(STDDEV_POP(pcwf.air_quality_pm10) * STDDEV_POP(pcwf.temperature_celsius)), 2) AS c_air_quality_pm10_VS_temperature_celsius
+FROM pbi_countries_with_full_2025 pcwf INTO @corr_pm10_VS_temperature_celsius;
 
 SELECT @corr_pm10_VS_temperature_celsius AS `Correlation value between micro dust < 10 micrometer and temperature in °C`,
 get_correlation_category(@corr_pm10_VS_temperature_celsius) AS `Correlation category`;
@@ -603,9 +811,9 @@ get_correlation_category(@corr_pm10_VS_temperature_celsius) AS `Correlation cate
  * Wie stark ist dieser Zusammenhang?
  */
 SELECT 
-ROUND((AVG(gwr.air_quality_pm10 * gwr.precip_mm) - AVG(gwr.air_quality_pm10) * AVG(gwr.precip_mm)) /
-(STDDEV_POP(gwr.air_quality_pm10) * STDDEV_POP(gwr.precip_mm)), 2) AS c_air_quality_pm10_VS_precip_mm
-FROM GlobalWeatherRepository gwr INTO @corr_pm10_VS_precip_mm;
+ROUND((AVG(pcwf.air_quality_pm10 * pcwf.precip_mm) - AVG(pcwf.air_quality_pm10) * AVG(pcwf.precip_mm)) /
+(STDDEV_POP(pcwf.air_quality_pm10) * STDDEV_POP(pcwf.precip_mm)), 2) AS c_air_quality_pm10_VS_precip_mm
+FROM pbi_countries_with_full_2025 pcwf INTO @corr_pm10_VS_precip_mm;
 
 SELECT @corr_pm10_VS_precip_mm AS `Correlation value between micro dust < 10 micrometer and amount of rain`,
 get_correlation_category(@corr_pm10_VS_precip_mm) AS `Correlation category`;
@@ -616,9 +824,9 @@ get_correlation_category(@corr_pm10_VS_precip_mm) AS `Correlation category`;
  * Wie stark ist dieser Zusammenhang?
  */
 SELECT 
-ROUND((AVG(gwr.air_quality_pm10 * gwr.cloud) - AVG(gwr.air_quality_pm10) * AVG(gwr.cloud)) /
-(STDDEV_POP(gwr.air_quality_pm10) * STDDEV_POP(gwr.cloud)), 2) AS c_air_quality_pm10_VS_cloud
-FROM GlobalWeatherRepository gwr INTO @corr_pm10_VS_cloud;
+ROUND((AVG(pcwf.air_quality_pm10 * pcwf.cloud) - AVG(pcwf.air_quality_pm10) * AVG(pcwf.cloud)) /
+(STDDEV_POP(pcwf.air_quality_pm10) * STDDEV_POP(pcwf.cloud)), 2) AS c_air_quality_pm10_VS_cloud
+FROM pbi_countries_with_full_2025 pcwf INTO @corr_pm10_VS_cloud;
 
 SELECT @corr_pm10_VS_cloud AS `Correlation value between micro dust < 10 micrometer and amount of clouds`,
 get_correlation_category(@corr_pm10_VS_cloud) AS `Correlation category`;
@@ -629,9 +837,9 @@ get_correlation_category(@corr_pm10_VS_cloud) AS `Correlation category`;
  * Wie stark ist dieser Zusammenhang?
  */
 SELECT 
-ROUND((AVG(gwr.air_quality_pm10 * gwr.visibility_km) - AVG(gwr.air_quality_pm10) * AVG(gwr.visibility_km)) /
-(STDDEV_POP(gwr.air_quality_pm10) * STDDEV_POP(gwr.visibility_km)), 2) AS c_air_quality_pm10_VS_visibility_km
-FROM GlobalWeatherRepository gwr INTO @corr_pm10_VS_visibility_km;
+ROUND((AVG(pcwf.air_quality_pm10 * pcwf.visibility_km) - AVG(pcwf.air_quality_pm10) * AVG(pcwf.visibility_km)) /
+(STDDEV_POP(pcwf.air_quality_pm10) * STDDEV_POP(pcwf.visibility_km)), 2) AS c_air_quality_pm10_VS_visibility_km
+FROM pbi_countries_with_full_2025 pcwf INTO @corr_pm10_VS_visibility_km;
 
 SELECT @corr_pm10_VS_visibility_km AS `Correlation value between micro dust < 10 micrometer and the visibility in km`,
 get_correlation_category(@corr_pm10_VS_visibility_km) AS `Correlation category`;
@@ -645,9 +853,9 @@ get_correlation_category(@corr_pm10_VS_visibility_km) AS `Correlation category`;
  * Wie stark ist dieser Zusammenhang?
  */
 SELECT 
-ROUND((AVG(gwr.visibility_km * gwr.humidity) - AVG(gwr.visibility_km) * AVG(gwr.humidity)) /
-(STDDEV_POP(gwr.visibility_km) * STDDEV_POP(gwr.humidity)), 2) AS c_visibility_km_VS_humidity
-FROM GlobalWeatherRepository gwr INTO @corr_visibility_VS_humidity;
+ROUND((AVG(pcwf.visibility_km * pcwf.humidity) - AVG(pcwf.visibility_km) * AVG(pcwf.humidity)) /
+(STDDEV_POP(pcwf.visibility_km) * STDDEV_POP(pcwf.humidity)), 2) AS c_visibility_km_VS_humidity
+FROM pbi_countries_with_full_2025 pcwf INTO @corr_visibility_VS_humidity;
 
 SELECT @corr_visibility_VS_humidity AS `Correlation value between visibility in km and humidity in percent`,
 get_correlation_category(@corr_visibility_VS_humidity) AS `Correlation category`;
@@ -657,9 +865,9 @@ get_correlation_category(@corr_visibility_VS_humidity) AS `Correlation category`
  * Wie stark ist dieser Zusammenhang?
  */
 SELECT 
-ROUND((AVG(gwr.temperature_celsius * gwr.humidity) - AVG(gwr.temperature_celsius) * AVG(gwr.humidity)) /
-(STDDEV_POP(gwr.temperature_celsius) * STDDEV_POP(gwr.humidity)), 2) AS c_temperature_celsius_VS_humidity 
-FROM GlobalWeatherRepository gwr INTO @corr_temperature_VS_humidity;
+ROUND((AVG(pcwf.temperature_celsius * pcwf.humidity) - AVG(pcwf.temperature_celsius) * AVG(pcwf.humidity)) /
+(STDDEV_POP(pcwf.temperature_celsius) * STDDEV_POP(pcwf.humidity)), 2) AS c_temperature_celsius_VS_humidity 
+FROM pbi_countries_with_full_2025 pcwf INTO @corr_temperature_VS_humidity;
 
 SELECT @corr_temperature_VS_humidity AS `Correlation value between temperature in celsius and humidity in percent`,
 get_correlation_category(@corr_temperature_VS_humidity) AS `Correlation category`;
@@ -669,9 +877,9 @@ get_correlation_category(@corr_temperature_VS_humidity) AS `Correlation category
  * Wie stark ist dieser Zusammenhang?
  */
 SELECT 
-ROUND((AVG(gwr.feels_like_celsius * gwr.humidity) - AVG(gwr.feels_like_celsius) * AVG(gwr.humidity)) /
-(STDDEV_POP(gwr.feels_like_celsius) * STDDEV_POP(gwr.humidity)), 2) AS c_feels_like_celsius_VS_humidity 
-FROM GlobalWeatherRepository gwr INTO @corr_feeled_temp_VS_humidity;
+ROUND((AVG(pcwf.feels_like_celsius * pcwf.humidity) - AVG(pcwf.feels_like_celsius) * AVG(pcwf.humidity)) /
+(STDDEV_POP(pcwf.feels_like_celsius) * STDDEV_POP(pcwf.humidity)), 2) AS c_feels_like_celsius_VS_humidity 
+FROM pbi_countries_with_full_2025 pcwf INTO @corr_feeled_temp_VS_humidity;
 
 SELECT @corr_feeled_temp_VS_humidity AS `Correlation value between feeled temperature in celsius and humidity in percent`,
 get_correlation_category(@corr_feeled_temp_VS_humidity) AS `Correlation category`;
@@ -681,9 +889,9 @@ get_correlation_category(@corr_feeled_temp_VS_humidity) AS `Correlation category
  * Wie stark ist dieser Zusammenhang?
  */
 SELECT 
-ROUND((AVG(gwr.air_quality_Ozone * gwr.uv_index) - AVG(gwr.air_quality_Ozone) * AVG(gwr.uv_index)) /
-(STDDEV_POP(gwr.air_quality_Ozone) * STDDEV_POP(gwr.uv_index)), 2) AS c_ozone_VS_uv_index
-FROM GlobalWeatherRepository gwr INTO @corr_ozone_VS_uv_index;
+ROUND((AVG(pcwf.air_quality_Ozone * pcwf.uv_index) - AVG(pcwf.air_quality_Ozone) * AVG(pcwf.uv_index)) /
+(STDDEV_POP(pcwf.air_quality_Ozone) * STDDEV_POP(pcwf.uv_index)), 2) AS c_ozone_VS_uv_index
+FROM pbi_countries_with_full_2025 pcwf INTO @corr_ozone_VS_uv_index;
 
 SELECT @corr_ozone_VS_uv_index AS `Correlation value between ozone and uv index`,
 get_correlation_category(@corr_ozone_VS_uv_index) AS `Correlation category`;
@@ -691,13 +899,16 @@ get_correlation_category(@corr_ozone_VS_uv_index) AS `Correlation category`;
 /*
  * Finde den Ort und den Zeitpunkt mit dem höchsten Wert des UV Index weltweit 2025
  */
-SELECT gwr.uv_index AS max_uv_index,
-gwr.location_name,
-gwr.country
-FROM GlobalWeatherRepository gwr
-WHERE EXTRACT(YEAR FROM gwr.last_updated) = 2025
-ORDER BY gwr.uv_index DESC
+CREATE OR REPLACE VIEW pbi_highest_uv_index_worldwide_2025 AS
+SELECT pcwf.uv_index AS max_uv_index,
+pcwf.location_name,
+pcwf.country
+FROM pbi_countries_with_full_2025 pcwf
+WHERE EXTRACT(YEAR FROM pcwf.last_updated) = 2025
+ORDER BY pcwf.uv_index DESC
 LIMIT 1;
+
+SELECT * FROM pbi_highest_uv_index_worldwide_2025;
 
 /*
  * Finde alle Orte, die 2025 einen maximalen UV Index von >= 11 aufwiesen.
@@ -706,67 +917,30 @@ LIMIT 1;
  * diesen Orten die vollständige Bedeckung mit Kleidungsstücken oder das Aufhalten
  * ausschließlich in geschlossenen Räumen.
  */
-
-SELECT gwr.uv_index AS max_uv_index,
-gwr.location_name,
-gwr.country
-FROM GlobalWeatherRepository gwr
-WHERE EXTRACT(YEAR FROM gwr.last_updated) = 2025
-AND gwr.uv_index >= 11
-ORDER BY gwr.uv_index DESC;
-
-/*
- * Finde die Rangordnung der verschiedenen Windrichtungen in Berlin 2025 heraus
- * Erwartetes Ergebnis: 
- * Westwind sollte an Platz 1 in der Liste erscheinen, da dies die bekannte Wetterseite ist.
- * 
- * Hierzu wird eine neue Spalte hinter der Windrichtung eingefügt, in der nur die Aufteilung
- * IN Nord, Ost, Süd und West erfolgt.
- * Erwartetes Ergebnis: 
- * Eingruppierung sollte identisch sein zu N, E, S und W in der Spalte wind_direction
- */
-ALTER TABLE GlobalWeatherRepository ADD COLUMN wind_direction_group VARCHAR(8) AFTER wind_direction;
-
-/* 
- * Safe update mode ausschalten, da ich mehrere Werte gleichzeitig aktualisieren möchte
- */
-SET sql_safe_updates = 0;
-
-UPDATE GlobalWeatherRepository
-SET wind_direction_group = 
-CASE 
-    -- North: 348.75° bis 360° und 0° bis 11.25°
-    WHEN wind_degree >= 348.75 OR wind_degree <= 11.25 THEN 'North'
-    -- East: 78.75° bis 101.25°
-    WHEN wind_degree BETWEEN 78.75 AND 101.25 THEN 'East'
-    -- South: 168.75° bis 191.25°
-    WHEN wind_degree BETWEEN 168.75 AND 191.25 THEN 'South'
-    -- West: 258.75° bis 281.25°
-    WHEN wind_degree BETWEEN 258.75 AND 281.25 THEN 'West'
-    ELSE NULL
-END;
-
-/* 
- * Safe update mode wieder einschalten
- */
-SET sql_safe_updates = 1;
+SELECT pcwf.uv_index AS max_uv_index,
+pcwf.location_name,
+pcwf.country
+FROM pbi_countries_with_full_2025 pcwf
+WHERE EXTRACT(YEAR FROM pcwf.last_updated) = 2025
+AND pcwf.uv_index >= 11
+ORDER BY pcwf.uv_index DESC;
 
 WITH wind_counts AS (
     SELECT 
-        wind_direction_group,
+        pcwf.wind_direction,
         COUNT(*) AS count_per_type
-    FROM GlobalWeatherRepository
+    FROM pbi_countries_with_full_2025 pcwf
     WHERE location_name = 'Berlin'
-    AND EXTRACT(YEAR FROM last_updated) = 2025
-    AND wind_direction_group IS NOT NULL
-    GROUP BY wind_direction_group
+    AND EXTRACT(YEAR FROM pcwf.last_updated) = 2025
+    AND pcwf.wind_direction IS NOT NULL
+    GROUP BY pcwf.wind_direction
 ),
 total_count AS (
     SELECT SUM(count_per_type) AS total_rows
     FROM wind_counts
 )
 SELECT 
-    wc.wind_direction_group,
+    wc.wind_direction,
     wc.count_per_type,
     ROUND((wc.count_per_type * 100.0 / tc.total_rows), 2) AS percentage
 FROM wind_counts wc
@@ -776,21 +950,22 @@ ORDER BY wc.count_per_type DESC;
 /*
  * Finde das durchschnittliche Sonnenbrandrisiko in Berlin 2025 in Prozent heraus
  */
+CREATE OR REPLACE VIEW pbi_sunburn_risk_level_berlin_2025 AS
 WITH tb_risk_level AS (
-	SELECT ROUND(gwr.uv_index) AS uv_index_rounded, 
-	COUNT(get_uv_risk(ROUND(gwr.uv_index))) AS ct_uv_risk_level,
-	get_uv_risk(ROUND(gwr.uv_index)) AS uv_risk_level
-	FROM GlobalWeatherRepository gwr 
-	WHERE gwr.location_name LIKE '%berlin%'
-	AND EXTRACT(YEAR FROM gwr.last_updated) = 2025
-	GROUP BY uv_index_rounded, gwr.uv_index, uv_risk_level
+	SELECT ROUND(pcwf.uv_index) AS uv_index_rounded, 
+	COUNT(get_uv_risk(ROUND(pcwf.uv_index))) AS ct_uv_risk_level,
+	get_uv_risk(ROUND(pcwf.uv_index)) AS uv_risk_level
+	FROM pbi_countries_with_full_2025 pcwf 
+	WHERE pcwf.location_name LIKE '%berlin%'
+	AND EXTRACT(YEAR FROM pcwf.last_updated) = 2025
+	GROUP BY uv_index_rounded, pcwf.uv_index, uv_risk_level
 	ORDER BY 
 	CASE
-		WHEN ROUND(gwr.uv_index) >= 11 THEN 0
-		WHEN ROUND(gwr.uv_index) BETWEEN 8 AND 10 THEN 1
-		WHEN ROUND(gwr.uv_index) BETWEEN 6 AND 7 THEN 2
-		WHEN ROUND(gwr.uv_index) BETWEEN 3 AND 5 THEN 3
-		WHEN ROUND(gwr.uv_index) BETWEEN 1 AND 2 THEN 4
+		WHEN ROUND(pcwf.uv_index) >= 11 THEN 0
+		WHEN ROUND(pcwf.uv_index) BETWEEN 8 AND 10 THEN 1
+		WHEN ROUND(pcwf.uv_index) BETWEEN 6 AND 7 THEN 2
+		WHEN ROUND(pcwf.uv_index) BETWEEN 3 AND 5 THEN 3
+		WHEN ROUND(pcwf.uv_index) BETWEEN 1 AND 2 THEN 4
 		ELSE 5
 	END
 ), tb_uv_risk_level_count AS (
@@ -805,3 +980,5 @@ urlc.uv_risk_level,
 ROUND(SUM(urlc.ct_uv_risk_level) * 100 / 365, 2) AS percentual_risk_level
 FROM tb_uv_risk_level_count urlc
 GROUP BY urlc.uv_risk_level;
+
+SELECT * FROM pbi_sunburn_risk_level_berlin_2025;
