@@ -482,6 +482,21 @@ SELECT * FROM v_day_count_weather_conditions_germany_2025;
 CREATE OR REPLACE VIEW pbi_day_count_weather_conditions_germany_2025 AS
 SELECT
 vwg.`month`,
+LEFT(vwg.`month`, 3) AS month_short,
+CASE
+	WHEN vwg.`month` LIKE 'Jan%' THEN 1
+	WHEN vwg.`month` LIKE 'Feb%' THEN 2
+	WHEN vwg.`month` LIKE 'Mär%' THEN 3
+	WHEN vwg.`month` LIKE 'Apr%' THEN 4
+	WHEN vwg.`month` LIKE 'Mai'  THEN 5
+	WHEN vwg.`month` LIKE 'Jun%' THEN 6
+	WHEN vwg.`month` LIKE 'Jul%' THEN 7
+	WHEN vwg.`month` LIKE 'Aug%' THEN 8
+	WHEN vwg.`month` LIKE 'Sep%' THEN 9
+	WHEN vwg.`month` LIKE 'Okt%' THEN 10
+	WHEN vwg.`month` LIKE 'Nov%' THEN 11
+	ELSE 12
+END as month_number,
 COUNT(
 CASE 
 	WHEN cloud < 50 AND NOT precip_mm > 0 THEN 1 
