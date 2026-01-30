@@ -661,8 +661,12 @@ SELECT * FROM pbi_min_temperature_worldwide_2025;
  * Berechne die maximale Temperatur weltweit und erstelle eine View für PowerBI
  */
 CREATE OR REPLACE VIEW pbi_max_temperature_worldwide_2025 AS 
-SELECT MAX(pcwf.temperature_celsius) AS max_temperature_worldwide_2025
-FROM pbi_countries_with_full_2025 pcwf;
+SELECT MAX(pcwf.temperature_celsius) AS max_temperature_worldwide_2025,
+pcwf.location_name, pcwf.country
+FROM pbi_countries_with_full_2025 pcwf
+GROUP BY pcwf.location_name, pcwf.country
+ORDER BY max_temperature_worldwide_2025 DESC
+LIMIT 1;
 
 SELECT * FROM pbi_max_temperature_worldwide_2025;
 
