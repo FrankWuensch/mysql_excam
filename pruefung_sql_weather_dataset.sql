@@ -582,7 +582,7 @@ SELECT MIN(pet.temperature_celsius) AS min_temp_european_timezone_2025,
 pet.location_name, pet.country
 FROM pbi_european_timezone_2025 pet
 GROUP BY pet.location_name, pet.country
-ORDER BY min_temp_european_timezone_2025 DESC
+ORDER BY min_temp_european_timezone_2025
 LIMIT 1;
 
 SELECT * FROM pbi_min_temperature_european_timezone_2025;
@@ -595,7 +595,7 @@ SELECT MAX(pet.temperature_celsius) AS max_temp_european_timezone_2025,
 pet.location_name, pet.country
 FROM pbi_european_timezone_2025 pet
 GROUP BY pet.location_name, pet.country
-ORDER BY max_temp_european_timezone_2025
+ORDER BY max_temp_european_timezone_2025 DESC
 LIMIT 1;
 
 SELECT * FROM pbi_max_temperature_european_timezone_2025;
