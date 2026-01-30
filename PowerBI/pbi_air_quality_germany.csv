@@ -1,0 +1,26 @@
+"location_name","month","air_quality_badness_category","ct_air_quality_category","month_number"
+Berlin,Januar,schlecht,4,1
+Berlin,Januar,mittel,7,1
+Berlin,Januar,gut,20,1
+Berlin,Februar,schlecht,9,2
+Berlin,Februar,mittel,14,2
+Berlin,Februar,gut,5,2
+Berlin,März,sehr schlecht,6,3
+Berlin,März,schlecht,5,3
+Berlin,März,mittel,8,3
+Berlin,März,gut,12,3
+Berlin,April,mittel,9,4
+Berlin,April,gut,21,4
+Berlin,Mai,mittel,1,5
+Berlin,Mai,gut,30,5
+Berlin,Juni,gut,30,6
+Berlin,Juli,gut,31,7
+Berlin,August,mittel,5,8
+Berlin,August,gut,26,8
+Berlin,September,mittel,2,9
+Berlin,September,gut,28,9
+Berlin,Oktober,gut,31,10
+Berlin,November,mittel,2,11
+Berlin,November,gut,28,11
+Berlin,Dezember,mittel,6,12
+Berlin,Dezember,gut,25,12
