@@ -22,7 +22,7 @@
 - Höchsttemperatur weltweit inkl. Zeitpunkt und Ort
 
 ### Konkrete Fragestellungen
-- [ ] Frage 1
+- [x] Frage 1
     - [x] Wie verändert sich das Wetterprofil in Deutschland im Jahresverlauf 2025 und lassen sich klare saisonale Muster erkennen?
         - [x] Anzahl sonniger Tage
         - [x] Anzahl bewölkter Tage
@@ -33,7 +33,7 @@
             - [x] monatlich
             - [x] quartalsweise
             - [x] nach definierten Jahreszeiten (siehe [hier](#zielsetzungen-der-analyse))
-        - [ ] Visualisierung von Trends & Auffälligkeiten (Power BI)
+        - [x] Visualisierung von Trends & Auffälligkeiten (Power BI)
 - [x] Frage 2
     - [x] Welche Orte weltweit weisen extreme Temperatur- und Luftverschmutzungsprofile auf und welche Wetterfaktoren stehen damit in Zusammenhang?
         - [x] Welche 10 Orte haben die höchste bzw. niedrigste Jahresdurchschnittstemperatur?
