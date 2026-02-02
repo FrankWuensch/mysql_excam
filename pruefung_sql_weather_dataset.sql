@@ -454,7 +454,23 @@ FROM
 	pbi_sum_rain_germany_2025;
 
 /*
- * Berechne die Durchschnittstemperatur für Deutschland 2025 und erstelle eine View für PowerBI
+ * Berechne die durchschnittliche gefühlte Temperatur für Deutschland 2025
+ * und erstelle eine View für Power BI
+ */
+CREATE OR REPLACE
+VIEW pbi_avg_feeled_temperature_germany_2025 AS
+SELECT
+	ROUND(AVG(wg.feels_like_celsius), 2) AS avg_feeled_temp
+FROM
+	pbi_weather_germany_2025 wg;
+
+SELECT
+	*
+FROM
+	pbi_avg_feeled_temperature_germany_2025;
+
+/*
+ * Berechne die Durchschnittstemperatur für Deutschland 2025 und erstelle eine View für Power BI
  */
 CREATE OR REPLACE
 VIEW pbi_avg_temperature_germany_2025 AS
@@ -545,6 +561,54 @@ SELECT
 	*
 FROM
 	pbi_weather_germany_with_seasons;
+
+/*
+ * Berechne die durchschnittliche Temperatur in Deutschland bezogen auf die
+ * saisonale Betrachtung und erstelle eine View für Power BI
+ */
+CREATE OR REPLACE
+VIEW pbi_avg_temperature_germany_seasons AS
+SELECT
+	ROUND(AVG(wgs.temperature_celsius), 2) AS avg_temp_seasons_germany
+FROM
+	pbi_weather_germany_with_seasons wgs;
+
+SELECT
+	*
+FROM
+	pbi_avg_temperature_germany_seasons;
+
+/*
+ * Berechne die minimale Temperatur in Deutschland bezogen auf die
+ * saisonale Betrachtung und erstelle eine View für Power BI
+ */
+CREATE OR REPLACE
+VIEW pbi_min_temperature_germany_seasons AS
+SELECT
+	MIN(wgs.temperature_celsius) AS min_temp_seasons_germany
+FROM
+	pbi_weather_germany_with_seasons wgs;
+
+SELECT
+	*
+FROM
+	pbi_min_temperature_germany_seasons;
+
+/*
+ * Berechne die maximale Temperatur in Deutschland bezogen auf die
+ * saisonale Betrachtung und erstelle eine View für Power BI
+ */
+CREATE OR REPLACE
+VIEW pbi_max_temperature_germany_seasons AS
+SELECT
+	MAX(wgs.temperature_celsius) AS max_temp_seasons_germany
+FROM
+	pbi_weather_germany_with_seasons wgs;
+
+SELECT
+	*
+FROM
+	pbi_max_temperature_germany_seasons;
 
 /*
  * Finde
@@ -856,7 +920,8 @@ SELECT
 	SUM(pwg.precip_mm) AS sum_rain,
 	ROUND(AVG(pwg.humidity), 2) AS humidity,
 	DENSE_RANK() OVER (
-	ORDER BY SUM(pwg.precip_mm) DESC) AS ranking
+ORDER BY
+	SUM(pwg.precip_mm) DESC) AS ranking
 FROM
 	pbi_weather_germany_2025 pwg
 GROUP BY
