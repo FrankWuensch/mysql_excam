@@ -188,24 +188,29 @@ SELECT
  * die vorhandenen Daten in der Datenbanktabelle
  */
 SELECT
+	gwr.location_name,
 	gwr.country,
 	gwr.timezone
 FROM
 	GlobalWeatherRepository gwr
 GROUP BY
+	gwr.location_name,
 	gwr.country,
 	gwr.timezone
 ORDER BY
-	gwr.timezone,
-	gwr.country;
+	gwr.location_name,
+	gwr.country,
+	gwr.timezone;
 
 SELECT
 	DISTINCT gwr.country,
-	COUNT(gwr.country) AS ct_days
+	gwr.location_name,
+	COUNT(gwr.location_name) AS ct_days
 FROM
 	GlobalWeatherRepository gwr
 GROUP BY
-	gwr.country;
+	gwr.country,
+	gwr.location_name;
 
 SELECT
 	MIN(gwr.temperature_celsius) AS abs_min_temp,
@@ -334,6 +339,21 @@ FROM
 	pbi_countries_with_full_2025;
 
 /*
+ * Berechne die Gesamtanzahl der Regionen mit vollständigen Daten 2025
+ */
+CREATE OR REPLACE
+VIEW pbi_sum_of_locations_2025 AS
+SELECT
+	COUNT(vcwf.location_name) AS locations_count
+FROM
+	v_countries_with_full_2025 vcwf;
+
+SELECT
+	*
+FROM
+	pbi_sum_of_locations_2025;
+
+/*
  * Zeige alle Länder innerhalb der europäischen Zeitzone, die vollständige Daten
  * für das Jahr 2025 enthalten
  */
@@ -348,6 +368,7 @@ WHERE
 	AND pcwf.timezone LIKE '%europe%'
 GROUP BY
 	pcwf.country,
+	pcwf.location_name,
 	pcwf.timezone
 HAVING
 	COUNT(pcwf.country) = 365
@@ -912,8 +933,8 @@ FROM
  * Luftfeuchtigkeit für Deutschland (Berlin) 2025
  */
 CREATE OR REPLACE
-VIEW pbi_avg_rain_germany_2025 AS
-WITH tb_avg_rain_monthly AS (
+VIEW pbi_sum_rain_germany_2025 AS
+WITH tb_sum_rain_monthly AS (
 SELECT
 	get_month(DATE(pwg.last_updated)) AS `month`,
 	EXTRACT(MONTH FROM pwg.last_updated) AS month_number,
@@ -931,14 +952,14 @@ GROUP BY
 SELECT
 	DISTINCT *
 FROM
-	tb_avg_rain_monthly srm
+	tb_sum_rain_monthly srm
 ORDER BY
 	srm.ranking;
 
 SELECT
 	*
 FROM
-	pbi_avg_rain_germany_2025;
+	pbi_sum_rain_germany_2025;
 
 /*
  * Analysen bezogen auf die europäische Zeitzone
